@@ -18,5 +18,5 @@ Para contar con acceso a este contenedor podemos ejecutar:
 docker-compose up --build
 
 # Accedemos a la interfaz de terminal de la base de datos del contenedor
-docker exec -it pc_db -c 'psql -U postgres'
+docker exec -it pc_db bash -c 'psql -U postgres -d pc_db'
 ```
