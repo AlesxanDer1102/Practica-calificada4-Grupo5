@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg
+
+MSG_FILE="$1"
+MSG="$(head -n1 "$MSG_FILE")"
+
+# Regex: tipo(opcional_scope)?: descripción
+PATTERN='^(feat|fix|chore|docs|style|refactor|perf|test)(\([a-z0-9_-]+\))?: [A-ZÁÉÍÓÚÑ][[:print:]]{1,72}$'
+
+if [[ "$MSG" =~ $PATTERN ]]; then
+  echo "✔ Commit message válido."
+  exit 0
+else
+  cat << EOF
+✗ Commit message inválido.
+
+Debe seguir Conventional Commits:
+  tipo(opcional_scope)?: Descripción breve
+
+Tipos permitidos: feat, fix, chore, docs, style, refactor, perf, test
+Ejemplo válido:
+  feat(auth): Añadir validación de email
+EOF
+  exit 1
+fi
