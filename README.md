@@ -20,3 +20,12 @@ docker-compose up --build
 # Accedemos a la interfaz de terminal de la base de datos del contenedor
 docker exec -it pc_db -c 'psql -U postgres'
 ```
+
+
+## Githooks
+
+Para este proyecto estaremos utilizando githooks para validar commits y push, para poder tenerlo activo localmente usa el siguiente comando
+
+```
+.githooks/setup.sh
+```
