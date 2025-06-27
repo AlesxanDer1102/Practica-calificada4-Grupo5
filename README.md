@@ -18,7 +18,80 @@ Para contar con acceso a este contenedor podemos ejecutar:
 docker-compose up --build
 
 # Accedemos a la interfaz de terminal de la base de datos del contenedor
-docker exec -it pc_db -c 'psql -U postgres'
+docker exec -it pc_db bash -c 'psql -U postgres -d pc_db'
+
+# Para eliminar el contendor con sus datos
+docker-compose down -v
+```
+
+Se añadió una pequeña aplicación de demostración para la interacción con la base de datos en `src\` accedida mediante `main.py`.
+Este es un simple sistema CRUD que maneja usuarios, productos y pedidos; se tienen la siguientes relaciones:
+
+### Tabla usuarios
+
+| Nombre de la columna | Tipo de dato | Restricciones |
+|-------------|-----------|-------------|
+| usuario_id | INTEGER | PRIMARY KEY |
+| nombre | STRING | NOT NULL |
+| apellido | STRING | NOT NULL |
+
+### Tabla productos
+
+| Nombre de la columna | Tipo de dato | Restricciones |
+|-------------|-----------|-------------|
+| producto_id | INTEGER | PRIMARY KEY, AUTO_INCREMENT |
+| nombre_producto | STRING | NOT NULL |
+| manufacturador | STRING | NOT NULL |
+| precio | FLOAT | NOT NULL, CHECK (precio >= 0) |
+
+### Tabla pedidos
+
+| Nombre de la columna | Tipo de dato | Restricciones |
+|-------------|-----------|-------------|
+| pedido_id | INTEGER | PRIMARY KEY, AUTO_INCREMENT |
+| usuario_id | INTEGER | FOREIGN KEY → usuarios.usuario_id, NOT NULL, ON DELETE CASCADE |
+| producto_id | INTEGER | FOREIGN KEY → productos.producto_id, NOT NULL, ON DELETE CASCADE |
+| cantidad | INTEGER | NOT NULL, CHECK (cantidad >= 0) |
+| fecha_pedido | DATETIME | NOT NULL, DEFAULT = NOW() |
+
+
+### Diagrama Entidad-Relación (Representación gráfica)
+```
+
+usuarios:                    pedidos:                     productos:
+┌──────────────┐            ┌──────────────┐            ┌──────────────┐
+│ usuario_id   │◄───────────┤ usuario_id   │            │ producto_id  │
+│ nombre       │            │ producto_id  ├───────────►│ nombre_prod. │
+│ apellido     │            │ pedido_id    │            │ manufact.    │
+└──────────────┘            │ cantidad     │            │ precio       │
+                            │ fecha_pedido │            └──────────────┘
+                            └──────────────┘
+```
+
+La aplicación cuenta con funcionalidades de un sistema CRUD básico que muestre los datos almacenados desde nuestro contenedor Docker mediante operaciones como:
+- **obtener_info_completa**: Obtiene todos los pedidos con información relacionada de usuarios y productos
+- **crear_usuario**: Crea un nuevo usuario en el sistema con nombre y apellido
+- **crear_producto**: Registra un nuevo producto con nombre, fabricante y precio
+- **crear_pedido**: Genera un nuevo pedido asociando usuario, producto y cantidad
+- **obtener_usuario**: Busca y retorna un usuario específico por su ID
+- **obtener_producto**: Busca y retorna un producto específico por su ID
+- **obtener_pedido**: Busca un pedido específico con toda su información relacionada
+- **eliminar_base_de_datos**: Elimina todas las tablas y datos de la base de datos
+
+### Acceso a la aplicación
+Para acceder a la aplicación se requiere de una inicialización de nuestro contenedor Docker con los comandos anteriormente mencionados. Ahora podemos ejecutar la aplicación de terminal mediante los siguientes comandos:
+```bash
+# Iniciamos un entorno virtual de python3
+python3 -m venv .venv
+
+# Accedemos a este entorno de trabajo
+source .venv/bin/activate
+
+# Instalamos las dependencias necesarias
+pip3 install -r requirements.txt
+
+# Ejecutamos nuestra aplicación
+python3 main.py
 ```
 
 
