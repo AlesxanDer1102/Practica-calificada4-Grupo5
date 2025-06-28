@@ -110,6 +110,11 @@ python3 main.py
 
 Para este proyecto estaremos utilizando githooks para validar commits y push, para poder tenerlo activo localmente usa el siguiente comando
 
+Para dar permisos\
+```
+chmod +x .githooks/setup.sh
+```
+
 ```
 .githooks/setup.sh
 ```
