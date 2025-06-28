@@ -10,28 +10,69 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+class Colors:
+    """
+    ANSI color codes for terminal output
+    """
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    
+    # Basic colors
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    
+    # Bright colors
+    BRIGHT_RED = '\033[91m'
+    BRIGHT_GREEN = '\033[92m'
+    BRIGHT_YELLOW = '\033[93m'
+    BRIGHT_BLUE = '\033[94m'
+    BRIGHT_MAGENTA = '\033[95m'
+    BRIGHT_CYAN = '\033[96m'
+    
+    @classmethod
+    def disable(cls):
+        """Disable all colors"""
+        for attr in dir(cls):
+            if not attr.startswith('_') and attr != 'disable':
+                setattr(cls, attr, '')
+
 class ProgressIndicator:
     """
-    Simple progress indicator for command line operations
+    Simple progress indicator for command line operations with color support
     """
-    def __init__(self, message: str):
+    def __init__(self, message: str, use_colors: bool = True):
         self.message = message
         self.active = False
+        self.use_colors = use_colors
         
     def start(self):
         """Start showing progress"""
         self.active = True
-        print(f"[INFO] {self.message}", end="", flush=True)
+        if self.use_colors:
+            print(f"{Colors.BLUE}[INFO]{Colors.RESET} {self.message}", end="", flush=True)
+        else:
+            print(f"[INFO] {self.message}", end="", flush=True)
         
     def update(self, status: str = "."):
         """Update progress indicator"""
         if self.active:
-            print(status, end="", flush=True)
+            if self.use_colors:
+                print(f"{Colors.CYAN}{status}{Colors.RESET}", end="", flush=True)
+            else:
+                print(status, end="", flush=True)
             
     def complete(self, success: bool = True):
         """Complete progress indication"""
         if self.active:
-            status = " [OK]" if success else " [FAILED]"
+            if success:
+                status = f" {Colors.BRIGHT_GREEN}[OK]{Colors.RESET}" if self.use_colors else " [OK]"
+            else:
+                status = f" {Colors.BRIGHT_RED}[FAILED]{Colors.RESET}" if self.use_colors else " [FAILED]"
             print(status)
             self.active = False
 
@@ -40,11 +81,16 @@ class BackupOrchestrator:
     Orquestador de backups para PostgreSQL con contenedores Docker
     """
 
-    def __init__(self, container_name: str = "pc_db", backup_dir: str = "backups", show_progress: bool = True):
+    def __init__(self, container_name: str = "pc_db", backup_dir: str = "backups", 
+                 show_progress: bool = True, use_colors: bool = True):
         self.container_name = container_name
         self.backup_dir = Path(backup_dir)
         self.backup_dir.mkdir(exist_ok=True)
         self.show_progress = show_progress
+        self.use_colors = use_colors
+        
+        if not use_colors:
+            Colors.disable()
 
         self.db_config = {
             "user": "postgres",
@@ -69,6 +115,26 @@ class BackupOrchestrator:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(file_handler)
+
+    def _print_message(self, level: str, message: str):
+        """Print colored message based on level"""
+        if not self.show_progress:
+            return
+            
+        color_map = {
+            'INFO': Colors.BLUE,
+            'SUCCESS': Colors.BRIGHT_GREEN,
+            'WARNING': Colors.BRIGHT_YELLOW,
+            'ERROR': Colors.BRIGHT_RED,
+            'FAILED': Colors.BRIGHT_RED,
+            'CANCELLED': Colors.YELLOW
+        }
+        
+        if self.use_colors:
+            color = color_map.get(level, Colors.WHITE)
+            print(f"{color}[{level}]{Colors.RESET} {message}")
+        else:
+            print(f"[{level}] {message}")
 
     def _validate_backup_name(self, name: str) -> tuple[bool, str]:
         """
@@ -157,20 +223,19 @@ class BackupOrchestrator:
         try:
             backup_filename, name_modified = self._resolve_backup_filename(custom_name, force_overwrite)
         except ValueError as e:
-            if self.show_progress:
-                print(f"[ERROR] {e}")
+            self._print_message('ERROR', str(e))
             self.logger.error(str(e))
             return False
             
         backup_path = self.backup_dir / backup_filename
 
         # Show name modification warning
-        if name_modified and self.show_progress:
-            print(f"[WARNING] Backup name modified to avoid conflict: {backup_filename}")
+        if name_modified:
+            self._print_message('WARNING', f"Backup name modified to avoid conflict: {backup_filename}")
 
         # Progress indicators
-        container_check = ProgressIndicator(f"Checking container '{self.container_name}'")
-        backup_progress = ProgressIndicator(f"Creating backup '{backup_filename}'")
+        container_check = ProgressIndicator(f"Checking container '{self.container_name}'", self.use_colors)
+        backup_progress = ProgressIndicator(f"Creating backup '{backup_filename}'", self.use_colors)
         
         try:
             # Check container availability
@@ -181,7 +246,9 @@ class BackupOrchestrator:
             if not self._check_docker_container():
                 if self.show_progress:
                     container_check.complete(False)
-                self.logger.error(f"Container '{self.container_name}' not found or not running")
+                error_msg = f"Container '{self.container_name}' not found or not running"
+                self._print_message('ERROR', error_msg)
+                self.logger.error(error_msg)
                 return False
                 
             if self.show_progress:
@@ -227,15 +294,15 @@ class BackupOrchestrator:
                 
                 if self.show_progress:
                     backup_progress.complete(True)
-                    print(f"[INFO] Backup size: {self._format_file_size(file_size)}")
-                    print(f"[INFO] Location: {backup_path.absolute()}")
+                    self._print_message('INFO', f"Backup size: {self._format_file_size(file_size)}")
+                    self._print_message('INFO', f"Location: {backup_path.absolute()}")
                     
                 return True
             else:
                 self.logger.error(f"Error en pg_dump: {result.stderr}")
                 if self.show_progress:
                     backup_progress.complete(False)
-                    print(f"[ERROR] pg_dump failed: {result.stderr.strip()}")
+                self._print_message('ERROR', f"pg_dump failed: {result.stderr.strip()}")
                     
                 if backup_path.exists():
                     backup_path.unlink()
@@ -246,7 +313,7 @@ class BackupOrchestrator:
             self.logger.error(error_msg)
             if self.show_progress:
                 backup_progress.complete(False)
-                print(f"[ERROR] Backup timeout (>5 minutes)")
+            self._print_message('ERROR', "Backup timeout (>5 minutes)")
                 
             if backup_path.exists():
                 backup_path.unlink()
@@ -257,14 +324,14 @@ class BackupOrchestrator:
             self.logger.error(error_msg)
             if self.show_progress:
                 backup_progress.complete(False)
-                print(f"[ERROR] Docker command not found")
+            self._print_message('ERROR', "Docker command not found")
                 
             return False
         except Exception as e:
             self.logger.error(f"Error inesperado durante el backup: {e}")
             if self.show_progress:
                 backup_progress.complete(False)
-                print(f"[ERROR] Unexpected error: {e}")
+            self._print_message('ERROR', f"Unexpected error: {e}")
                 
             if backup_path.exists():
                 backup_path.unlink()
@@ -297,6 +364,7 @@ Examples:
   %(prog)s --quiet                   # Run without progress indicators
   %(prog)s --list                    # List existing backups
   %(prog)s --name test --force       # Overwrite existing backup
+  %(prog)s --no-color                # Disable colored output
         """
     )
     
@@ -344,6 +412,12 @@ Examples:
         help='List existing backup files and exit'
     )
     
+    parser.add_argument(
+        '--no-color',
+        action='store_true',
+        help='Disable colored output'
+    )
+    
     return parser
 
 
@@ -354,6 +428,11 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     
+    # Determine if colors should be used
+    use_colors = not args.no_color and sys.stdout.isatty()
+    if not use_colors:
+        Colors.disable()
+    
     # Configure logging level based on verbose flag
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -362,28 +441,49 @@ def main():
         orchestrator = BackupOrchestrator(
             container_name=args.container,
             backup_dir=args.dir,
-            show_progress=not args.quiet
+            show_progress=not args.quiet,
+            use_colors=use_colors
         )
         
         # Handle list command
         if args.list:
             backups = orchestrator.list_backups()
             if not backups:
-                print("No backup files found")
+                if use_colors:
+                    print(f"{Colors.YELLOW}No backup files found{Colors.RESET}")
+                else:
+                    print("No backup files found")
                 return 0
                 
-            print(f"Backup files in {orchestrator.backup_dir}:")
-            print("-" * 60)
+            # Header
+            if use_colors:
+                print(f"{Colors.CYAN}{Colors.BOLD}Backup files in {orchestrator.backup_dir}:{Colors.RESET}")
+                print(f"{Colors.CYAN}{'-' * 60}{Colors.RESET}")
+            else:
+                print(f"Backup files in {orchestrator.backup_dir}:")
+                print("-" * 60)
+                
             for backup in backups:
                 size_str = orchestrator._format_file_size(backup['size'])
-                print(f"{backup['name']:<30} {size_str:>10} {backup['modified']}")
+                if use_colors:
+                    print(f"{Colors.WHITE}{backup['name']:<30}{Colors.RESET} "
+                          f"{Colors.BRIGHT_BLUE}{size_str:>10}{Colors.RESET} "
+                          f"{Colors.MAGENTA}{backup['modified']}{Colors.RESET}")
+                else:
+                    print(f"{backup['name']:<30} {size_str:>10} {backup['modified']}")
             return 0
         
         if not args.quiet:
-            print("PostgreSQL Backup Orchestrator")
-            print(f"Container: {orchestrator.container_name}")
-            print(f"Backup directory: {orchestrator.backup_dir}")
-            print("-" * 40)
+            if use_colors:
+                print(f"{Colors.CYAN}{Colors.BOLD}PostgreSQL Backup Orchestrator{Colors.RESET}")
+                print(f"{Colors.WHITE}Container: {Colors.BRIGHT_YELLOW}{orchestrator.container_name}{Colors.RESET}")
+                print(f"{Colors.WHITE}Backup directory: {Colors.BRIGHT_YELLOW}{orchestrator.backup_dir}{Colors.RESET}")
+                print(f"{Colors.CYAN}{'-' * 40}{Colors.RESET}")
+            else:
+                print("PostgreSQL Backup Orchestrator")
+                print(f"Container: {orchestrator.container_name}")
+                print(f"Backup directory: {orchestrator.backup_dir}")
+                print("-" * 40)
         
         success = orchestrator.create_backup(
             custom_name=args.name,
@@ -392,18 +492,30 @@ def main():
         
         if success:
             if not args.quiet:
-                print("[SUCCESS] Backup completed successfully")
+                if use_colors:
+                    print(f"{Colors.BRIGHT_GREEN}[SUCCESS]{Colors.RESET} Backup completed successfully")
+                else:
+                    print("[SUCCESS] Backup completed successfully")
             return 0
         else:
             if not args.quiet:
-                print("[FAILED] Backup operation failed")
+                if use_colors:
+                    print(f"{Colors.BRIGHT_RED}[FAILED]{Colors.RESET} Backup operation failed")
+                else:
+                    print("[FAILED] Backup operation failed")
             return 1
             
     except KeyboardInterrupt:
-        print("\n[CANCELLED] Backup cancelled by user")
+        if use_colors:
+            print(f"\n{Colors.YELLOW}[CANCELLED]{Colors.RESET} Backup cancelled by user")
+        else:
+            print("\n[CANCELLED] Backup cancelled by user")
         return 1
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {e}")
+        if use_colors:
+            print(f"{Colors.BRIGHT_RED}[ERROR]{Colors.RESET} Unexpected error: {e}")
+        else:
+            print(f"[ERROR] Unexpected error: {e}")
         return 1
 
 
