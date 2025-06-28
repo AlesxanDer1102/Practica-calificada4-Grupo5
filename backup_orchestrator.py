@@ -187,6 +187,117 @@ class BackupOrchestrator:
             else:
                 print("Por favor, responda 'si' o 'no'")
 
+    def restore_database(self, backup_path: Path = None) -> bool:
+        """
+        Restaura la base de datos desde un archivo de backup
+        """
+        try:
+            # Si no se proporciona un backup, seleccionar interactivamente
+            if backup_path is None:
+                backup_path = self.select_backup_interactive()
+            
+            # Validar integridad del backup
+            if not self.validate_backup_integrity(backup_path):
+                return False
+            
+            # Solicitar confirmación
+            if not self.confirm_restore_operation(backup_path):
+                return False
+            
+            # Verificar disponibilidad del contenedor
+            container_check = ProgressIndicator(f"Verificando contenedor '{self.container_name}'", self.use_colors)
+            restore_progress = ProgressIndicator(f"Restaurando desde '{backup_path.name}'", self.use_colors)
+            
+            if self.show_progress:
+                container_check.start()
+                time.sleep(0.5)
+                
+            if not self._check_docker_container():
+                if self.show_progress:
+                    container_check.complete(False)
+                error_msg = f"Contenedor '{self.container_name}' no encontrado o no está ejecutándose"
+                self._print_message('ERROR', error_msg)
+                self.logger.error(error_msg)
+                return False
+                
+            if self.show_progress:
+                container_check.complete(True)
+
+            self.logger.info(f"Iniciando restauración desde: {backup_path.name}")
+
+            # Comando para restaurar usando psql
+            cmd = [
+                "docker", "exec", "-i", self.container_name,
+                "psql",
+                "-U", self.db_config["user"],
+                "-d", self.db_config["database"]
+            ]
+
+            # Iniciar progreso de restauración
+            if self.show_progress:
+                restore_progress.start()
+
+            env = os.environ.copy()
+            env["PGPASSWORD"] = self.db_config["password"]
+
+            # Ejecutar restauración
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                result = subprocess.run(
+                    cmd,
+                    stdin=f,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    env=env,
+                    timeout=300
+                )
+                
+                # Simular progreso durante la restauración
+                if self.show_progress:
+                    restore_progress.simulate_work()
+
+            if result.returncode == 0:
+                self.logger.info(f"Restauración completada exitosamente desde: {backup_path.name}")
+                
+                if self.show_progress:
+                    restore_progress.complete(True)
+                    self._print_message('INFO', f"Base de datos restaurada exitosamente")
+                    self._print_message('INFO', f"Backup utilizado: {backup_path.name}")
+                    
+                return True
+            else:
+                self.logger.error(f"Error en restauración: {result.stderr}")
+                if self.show_progress:
+                    restore_progress.complete(False)
+                self._print_message('ERROR', f"Falló la restauración: {result.stderr.strip()}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            error_msg = "Timeout en restauración - el proceso tomó más de 5 minutos"
+            self.logger.error(error_msg)
+            if self.show_progress:
+                restore_progress.complete(False)
+            self._print_message('ERROR', "Timeout de la restauración (>5 minutos)")
+            return False
+
+        except FileNotFoundError:
+            error_msg = "Error: Docker no encontrado"
+            self.logger.error(error_msg)
+            if self.show_progress:
+                restore_progress.complete(False)
+            self._print_message('ERROR', "Docker no está disponible")
+            return False
+            
+        except KeyboardInterrupt:
+            self._print_message('INFO', "Restauración cancelada por el usuario")
+            return False
+            
+        except Exception as e:
+            error_msg = f"Error inesperado durante la restauración: {str(e)}"
+            self.logger.error(error_msg)
+            self._print_message('ERROR', error_msg)
+            return False
+
     def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
         Crea un backup de la base de datos usando docker exec y pg_dump
@@ -384,6 +495,30 @@ def main():
         # Manejar comando de lista
         if config.list:
             return display_backup_list(orchestrator, use_colors)
+        
+        # Manejar comando de restauración
+        if config.restore:
+            if config.show_progress:
+                display_header(orchestrator, use_colors)
+            
+            # Restaurar desde archivo específico o selección interactiva
+            restore_path = None
+            if config.restore_file:
+                restore_path = Path(config.restore_file)
+                if not restore_path.exists():
+                    print_colored_message('ERROR', f"Archivo de backup no encontrado: {config.restore_file}", use_colors)
+                    return 1
+            
+            success = orchestrator.restore_database(restore_path)
+            
+            if success:
+                if config.show_progress:
+                    print_colored_message('SUCCESS', 'Restauración completada exitosamente', use_colors)
+                return 0
+            else:
+                if config.show_progress:
+                    print_colored_message('FAILED', 'La operación de restauración falló', use_colors)
+                return 1
         
         if config.show_progress:
             display_header(orchestrator, use_colors)
