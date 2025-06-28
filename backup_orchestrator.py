@@ -6,6 +6,7 @@ import logging
 import argparse
 import sys
 import time
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -69,6 +70,56 @@ class BackupOrchestrator:
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(file_handler)
 
+    def _validate_backup_name(self, name: str) -> tuple[bool, str]:
+        """
+        Valida que el nombre del backup sea válido para el sistema de archivos
+        """
+        if not name:
+            return False, "Backup name cannot be empty"
+            
+        # Check for invalid characters
+        invalid_chars = r'[<>:"/\\|?*]'
+        if re.search(invalid_chars, name):
+            return False, f"Backup name contains invalid characters: {invalid_chars}"
+            
+        # Check length
+        if len(name) > 200:
+            return False, "Backup name too long (max 200 characters)"
+            
+        # Check for reserved names (Windows compatibility)
+        reserved_names = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 
+                         'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 
+                         'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
+        if name.upper() in reserved_names:
+            return False, f"'{name}' is a reserved system name"
+            
+        return True, "Valid backup name"
+
+    def _resolve_backup_filename(self, custom_name: str = None, force_overwrite: bool = False) -> tuple[str, bool]:
+        """
+        Resuelve el nombre final del backup, manejando conflictos si es necesario
+        """
+        if custom_name:
+            is_valid, message = self._validate_backup_name(custom_name)
+            if not is_valid:
+                raise ValueError(f"Invalid backup name: {message}")
+                
+            backup_filename = f"{custom_name}.sql"
+            backup_path = self.backup_dir / backup_filename
+            
+            # Check if file exists
+            if backup_path.exists() and not force_overwrite:
+                # Generate alternative name with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_filename = f"{custom_name}_{timestamp}.sql"
+                return backup_filename, True  # True indicates name was modified
+            else:
+                return backup_filename, False  # False indicates original name was used
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_filename = f"backup_{timestamp}.sql"
+            return backup_filename, False
+
     def _check_docker_container(self) -> bool:
         """
         Verifica si el contenedor Docker está disponible
@@ -84,17 +135,38 @@ class BackupOrchestrator:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
 
-    def create_backup(self, custom_name: str = None) -> bool:
+    def list_backups(self) -> list[dict]:
+        """
+        Lista todos los backups disponibles en el directorio
+        """
+        backups = []
+        for backup_file in self.backup_dir.glob("*.sql"):
+            stat = backup_file.stat()
+            backups.append({
+                'name': backup_file.name,
+                'size': stat.st_size,
+                'modified': datetime.fromtimestamp(stat.st_mtime),
+                'path': backup_file
+            })
+        return sorted(backups, key=lambda x: x['modified'], reverse=True)
+
+    def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
         Crea un backup de la base de datos usando docker exec y pg_dump
         """
-        if custom_name:
-            backup_filename = f"{custom_name}.sql"
-        else:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_filename = f"backup_{timestamp}.sql"
+        try:
+            backup_filename, name_modified = self._resolve_backup_filename(custom_name, force_overwrite)
+        except ValueError as e:
+            if self.show_progress:
+                print(f"[ERROR] {e}")
+            self.logger.error(str(e))
+            return False
             
         backup_path = self.backup_dir / backup_filename
+
+        # Show name modification warning
+        if name_modified and self.show_progress:
+            print(f"[WARNING] Backup name modified to avoid conflict: {backup_filename}")
 
         # Progress indicators
         container_check = ProgressIndicator(f"Checking container '{self.container_name}'")
@@ -223,6 +295,8 @@ Examples:
   %(prog)s --container my_db         # Backup from different container
   %(prog)s --dir /path/to/backups    # Use different backup directory
   %(prog)s --quiet                   # Run without progress indicators
+  %(prog)s --list                    # List existing backups
+  %(prog)s --name test --force       # Overwrite existing backup
         """
     )
     
@@ -258,6 +332,18 @@ Examples:
         help='Disable progress indicators'
     )
     
+    parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Overwrite existing backup files'
+    )
+    
+    parser.add_argument(
+        '--list', '-l',
+        action='store_true',
+        help='List existing backup files and exit'
+    )
+    
     return parser
 
 
@@ -279,13 +365,30 @@ def main():
             show_progress=not args.quiet
         )
         
+        # Handle list command
+        if args.list:
+            backups = orchestrator.list_backups()
+            if not backups:
+                print("No backup files found")
+                return 0
+                
+            print(f"Backup files in {orchestrator.backup_dir}:")
+            print("-" * 60)
+            for backup in backups:
+                size_str = orchestrator._format_file_size(backup['size'])
+                print(f"{backup['name']:<30} {size_str:>10} {backup['modified']}")
+            return 0
+        
         if not args.quiet:
             print("PostgreSQL Backup Orchestrator")
             print(f"Container: {orchestrator.container_name}")
             print(f"Backup directory: {orchestrator.backup_dir}")
             print("-" * 40)
         
-        success = orchestrator.create_backup(custom_name=args.name)
+        success = orchestrator.create_backup(
+            custom_name=args.name,
+            force_overwrite=args.force
+        )
         
         if success:
             if not args.quiet:
