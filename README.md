@@ -31,6 +31,29 @@ Contamos tambien con el archivo `backup_orchestrator.py` el cual es el script en
 ```bash
 # Creamos el backup con el script
 python3 backup_orchestrator.py
+
+# Crear backup con nombre personalizado
+python3 backup_orchestrator.py --name mi_backup_especial
+
+# Listar todos los backups disponibles
+python3 backup_orchestrator.py --list
+
+```
+
+### Características de Seguridad en Restauración
+
+- **Validación de integridad**: Verifica que el archivo de backup sea válido antes de restaurar
+- **Confirmación obligatoria**: Solicita confirmación explícita antes de sobrescribir datos
+- **Información detallada**: Muestra información del backup y base de datos objetivo
+- **Cancelación segura**: Permite cancelar en cualquier momento del proceso
+- **Verificación de contenedor**: Confirma que el contenedor Docker esté disponible
+```
+# Restauración interactiva
+python3 backup_orchestrator.py --restore
+
+# Restaurar archivo específico  
+python3 backup_orchestrator.py --restore --restore-file backups/backup.sql
+
 ```
 
 Se añadió una pequeña aplicación de demostración para la interacción con la base de datos en `src\` accedida mediante `main.py`.
