@@ -90,6 +90,48 @@ class BackupOrchestrator:
             })
         return sorted(backups, key=lambda x: x['modified'], reverse=True)
 
+    def select_backup_interactive(self) -> Path:
+        """
+        Permite al usuario seleccionar un backup de forma interactiva
+        """
+        backups = self.list_backups()
+        
+        if not backups:
+            self._print_message('ERROR', "No se encontraron backups disponibles")
+            raise ValueError("No hay backups disponibles para restaurar")
+        
+        self._print_message('INFO', "Backups disponibles:")
+        print()
+        
+        for i, backup in enumerate(backups, 1):
+            size_formatted = format_file_size(backup['size'])
+            modified_str = backup['modified'].strftime('%Y-%m-%d %H:%M:%S')
+            print(f"  {i}. {backup['name']}")
+            print(f"     Tamaño: {size_formatted}")
+            print(f"     Modificado: {modified_str}")
+            print()
+        
+        while True:
+            try:
+                selection = input("Seleccione el número del backup a restaurar (0 para cancelar): ").strip()
+                
+                if selection == '0':
+                    self._print_message('INFO', "Operación cancelada por el usuario")
+                    raise KeyboardInterrupt("Restauración cancelada")
+                
+                index = int(selection) - 1
+                if 0 <= index < len(backups):
+                    selected_backup = backups[index]['path']
+                    self._print_message('INFO', f"Backup seleccionado: {selected_backup.name}")
+                    return selected_backup
+                else:
+                    print("Por favor, ingrese un número válido.")
+                    
+            except ValueError:
+                print("Por favor, ingrese un número válido.")
+            except KeyboardInterrupt:
+                raise
+
     def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
         Crea un backup de la base de datos usando docker exec y pg_dump
