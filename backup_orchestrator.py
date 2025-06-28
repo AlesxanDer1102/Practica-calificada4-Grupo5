@@ -132,6 +132,61 @@ class BackupOrchestrator:
             except KeyboardInterrupt:
                 raise
 
+    def validate_backup_integrity(self, backup_path: Path) -> bool:
+        """
+        Valida la integridad básica del archivo de backup
+        """
+        try:
+            if not backup_path.exists():
+                self._print_message('ERROR', f"El archivo de backup no existe: {backup_path}")
+                return False
+            
+            if backup_path.stat().st_size == 0:
+                self._print_message('ERROR', "El archivo de backup está vacío")
+                return False
+            
+            # Verificar que el archivo contiene comandos SQL básicos
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                content = f.read(1000)  # Leer primeros 1000 caracteres
+                
+            # Verificar que contiene elementos típicos de un dump de PostgreSQL
+            required_patterns = ['CREATE', 'INSERT', '--']
+            found_patterns = [pattern for pattern in required_patterns if pattern in content.upper()]
+            
+            if len(found_patterns) < 2:
+                self._print_message('WARNING', "El archivo no parece ser un backup válido de PostgreSQL")
+                return False
+            
+            self._print_message('INFO', "Validación de integridad del backup: EXITOSA")
+            return True
+            
+        except Exception as e:
+            self._print_message('ERROR', f"Error al validar backup: {str(e)}")
+            return False
+
+    def confirm_restore_operation(self, backup_path: Path) -> bool:
+        """
+        Solicita confirmación al usuario antes de proceder con la restauración
+        """
+        self._print_message('WARNING', "ADVERTENCIA: Esta operación sobrescribirá TODOS los datos existentes")
+        print()
+        print(f"Backup a restaurar: {backup_path.name}")
+        print(f"Base de datos objetivo: {self.db_config['database']}")
+        print(f"Contenedor: {self.container_name}")
+        print()
+        
+        while True:
+            confirmation = input("¿Está seguro que desea continuar? (si/no): ").lower().strip()
+            
+            if confirmation in ['si', 'sí', 's', 'yes', 'y']:
+                self._print_message('INFO', "Confirmación recibida, procediendo con la restauración")
+                return True
+            elif confirmation in ['no', 'n']:
+                self._print_message('INFO', "Restauración cancelada por el usuario")
+                return False
+            else:
+                print("Por favor, responda 'si' o 'no'")
+
     def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
         Crea un backup de la base de datos usando docker exec y pg_dump
