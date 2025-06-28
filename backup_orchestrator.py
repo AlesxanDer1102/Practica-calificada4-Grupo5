@@ -6,18 +6,16 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-class BackupOrchestator:
+class BackupOrchestrator:
     """
     Orquestador de backups para PostgreSQL con conternedores Docker
     """
 
     def  __init__(self,container_name:str="pc_db",backup_dir:str="backups"):
 
-
         self.container_name=container_name
         self.backup_dir=Path(backup_dir)
         self.backup_dir.mkdir(exist_ok=True)
-
 
         self.db_config = {
             "user": "postgres",
@@ -26,7 +24,6 @@ class BackupOrchestator:
         }
 
         self.setup_logging()
-
 
     def setup_logging(self):
         """
@@ -55,7 +52,7 @@ class BackupOrchestator:
         backup_path = self.backup_dir / backup_filename
 
         try:
-            self.loggger.info(f"Iniciando el backup: {backup_filename}")
+            self.logger.info(f"Iniciando el backup: {backup_filename}")
 
 
             cmd = [
@@ -71,7 +68,6 @@ class BackupOrchestator:
 
             env=os.environ.copy()
             env["PGPASSWORD"] = self.db_config["password"]
-
 
             with open(backup_path,'w',encoding='utf-8') as f:
                 result =subprocess.run(
@@ -95,7 +91,7 @@ class BackupOrchestator:
                 return False
 
         except subprocess.TimeoutExpired:
-            self.logger.error("Timeout en pg_dumb - el proceso tomo mas de 5 minutos")
+            self.logger.error("Timeout en pg_dump - el proceso tomo mas de 5 minutos")
             if backup_path.exists():
                 backup_path.unlink()
             return False
@@ -111,7 +107,7 @@ class BackupOrchestator:
 
 def main():
     """ Funcion principal"""
-    orchestator=BackupOrchestator()
+    orchestator=BackupOrchestrator()
 
     print("=== ORQUESTADOR DE BACKUPS POSTGRESQL ===")
     print(f"Contenedor: {orchestator.container_name}")
@@ -127,7 +123,6 @@ def main():
         return 1
 
     return 0
-
 
 if __name__== "__main__":
     import sys
