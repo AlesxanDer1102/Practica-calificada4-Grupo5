@@ -90,6 +90,214 @@ class BackupOrchestrator:
             })
         return sorted(backups, key=lambda x: x['modified'], reverse=True)
 
+    def select_backup_interactive(self) -> Path:
+        """
+        Permite al usuario seleccionar un backup de forma interactiva
+        """
+        backups = self.list_backups()
+        
+        if not backups:
+            self._print_message('ERROR', "No se encontraron backups disponibles")
+            raise ValueError("No hay backups disponibles para restaurar")
+        
+        self._print_message('INFO', "Backups disponibles:")
+        print()
+        
+        for i, backup in enumerate(backups, 1):
+            size_formatted = format_file_size(backup['size'])
+            modified_str = backup['modified'].strftime('%Y-%m-%d %H:%M:%S')
+            print(f"  {i}. {backup['name']}")
+            print(f"     Tamaño: {size_formatted}")
+            print(f"     Modificado: {modified_str}")
+            print()
+        
+        while True:
+            try:
+                selection = input("Seleccione el número del backup a restaurar (0 para cancelar): ").strip()
+                
+                if selection == '0':
+                    self._print_message('INFO', "Operación cancelada por el usuario")
+                    raise KeyboardInterrupt("Restauración cancelada")
+                
+                index = int(selection) - 1
+                if 0 <= index < len(backups):
+                    selected_backup = backups[index]['path']
+                    self._print_message('INFO', f"Backup seleccionado: {selected_backup.name}")
+                    return selected_backup
+                else:
+                    print("Por favor, ingrese un número válido.")
+                    
+            except ValueError:
+                print("Por favor, ingrese un número válido.")
+            except KeyboardInterrupt:
+                raise
+
+    def validate_backup_integrity(self, backup_path: Path) -> bool:
+        """
+        Valida la integridad básica del archivo de backup
+        """
+        try:
+            if not backup_path.exists():
+                self._print_message('ERROR', f"El archivo de backup no existe: {backup_path}")
+                return False
+            
+            if backup_path.stat().st_size == 0:
+                self._print_message('ERROR', "El archivo de backup está vacío")
+                return False
+            
+            # Verificar que el archivo contiene comandos SQL básicos
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                content = f.read(1000)  # Leer primeros 1000 caracteres
+                
+            # Verificar que contiene elementos típicos de un dump de PostgreSQL
+            required_patterns = ['CREATE', 'INSERT', '--']
+            found_patterns = [pattern for pattern in required_patterns if pattern in content.upper()]
+            
+            if len(found_patterns) < 2:
+                self._print_message('WARNING', "El archivo no parece ser un backup válido de PostgreSQL")
+                return False
+            
+            self._print_message('INFO', "Validación de integridad del backup: EXITOSA")
+            return True
+            
+        except Exception as e:
+            self._print_message('ERROR', f"Error al validar backup: {str(e)}")
+            return False
+
+    def confirm_restore_operation(self, backup_path: Path) -> bool:
+        """
+        Solicita confirmación al usuario antes de proceder con la restauración
+        """
+        self._print_message('WARNING', "ADVERTENCIA: Esta operación sobrescribirá TODOS los datos existentes")
+        print()
+        print(f"Backup a restaurar: {backup_path.name}")
+        print(f"Base de datos objetivo: {self.db_config['database']}")
+        print(f"Contenedor: {self.container_name}")
+        print()
+        
+        while True:
+            confirmation = input("¿Está seguro que desea continuar? (si/no): ").lower().strip()
+            
+            if confirmation in ['si', 'sí', 's', 'yes', 'y']:
+                self._print_message('INFO', "Confirmación recibida, procediendo con la restauración")
+                return True
+            elif confirmation in ['no', 'n']:
+                self._print_message('INFO', "Restauración cancelada por el usuario")
+                return False
+            else:
+                print("Por favor, responda 'si' o 'no'")
+
+    def restore_database(self, backup_path: Path = None) -> bool:
+        """
+        Restaura la base de datos desde un archivo de backup
+        """
+        try:
+            # Si no se proporciona un backup, seleccionar interactivamente
+            if backup_path is None:
+                backup_path = self.select_backup_interactive()
+            
+            # Validar integridad del backup
+            if not self.validate_backup_integrity(backup_path):
+                return False
+            
+            # Solicitar confirmación
+            if not self.confirm_restore_operation(backup_path):
+                return False
+            
+            # Verificar disponibilidad del contenedor
+            container_check = ProgressIndicator(f"Verificando contenedor '{self.container_name}'", self.use_colors)
+            restore_progress = ProgressIndicator(f"Restaurando desde '{backup_path.name}'", self.use_colors)
+            
+            if self.show_progress:
+                container_check.start()
+                time.sleep(0.5)
+                
+            if not self._check_docker_container():
+                if self.show_progress:
+                    container_check.complete(False)
+                error_msg = f"Contenedor '{self.container_name}' no encontrado o no está ejecutándose"
+                self._print_message('ERROR', error_msg)
+                self.logger.error(error_msg)
+                return False
+                
+            if self.show_progress:
+                container_check.complete(True)
+
+            self.logger.info(f"Iniciando restauración desde: {backup_path.name}")
+
+            # Comando para restaurar usando psql
+            cmd = [
+                "docker", "exec", "-i", self.container_name,
+                "psql",
+                "-U", self.db_config["user"],
+                "-d", self.db_config["database"]
+            ]
+
+            # Iniciar progreso de restauración
+            if self.show_progress:
+                restore_progress.start()
+
+            env = os.environ.copy()
+            env["PGPASSWORD"] = self.db_config["password"]
+
+            # Ejecutar restauración
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                result = subprocess.run(
+                    cmd,
+                    stdin=f,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    env=env,
+                    timeout=300
+                )
+                
+                # Simular progreso durante la restauración
+                if self.show_progress:
+                    restore_progress.simulate_work()
+
+            if result.returncode == 0:
+                self.logger.info(f"Restauración completada exitosamente desde: {backup_path.name}")
+                
+                if self.show_progress:
+                    restore_progress.complete(True)
+                    self._print_message('INFO', f"Base de datos restaurada exitosamente")
+                    self._print_message('INFO', f"Backup utilizado: {backup_path.name}")
+                    
+                return True
+            else:
+                self.logger.error(f"Error en restauración: {result.stderr}")
+                if self.show_progress:
+                    restore_progress.complete(False)
+                self._print_message('ERROR', f"Falló la restauración: {result.stderr.strip()}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            error_msg = "Timeout en restauración - el proceso tomó más de 5 minutos"
+            self.logger.error(error_msg)
+            if self.show_progress:
+                restore_progress.complete(False)
+            self._print_message('ERROR', "Timeout de la restauración (>5 minutos)")
+            return False
+
+        except FileNotFoundError:
+            error_msg = "Error: Docker no encontrado"
+            self.logger.error(error_msg)
+            if self.show_progress:
+                restore_progress.complete(False)
+            self._print_message('ERROR', "Docker no está disponible")
+            return False
+            
+        except KeyboardInterrupt:
+            self._print_message('INFO', "Restauración cancelada por el usuario")
+            return False
+            
+        except Exception as e:
+            error_msg = f"Error inesperado durante la restauración: {str(e)}"
+            self.logger.error(error_msg)
+            self._print_message('ERROR', error_msg)
+            return False
+
     def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
         Crea un backup de la base de datos usando docker exec y pg_dump
@@ -287,6 +495,30 @@ def main():
         # Manejar comando de lista
         if config.list:
             return display_backup_list(orchestrator, use_colors)
+        
+        # Manejar comando de restauración
+        if config.restore:
+            if config.show_progress:
+                display_header(orchestrator, use_colors)
+            
+            # Restaurar desde archivo específico o selección interactiva
+            restore_path = None
+            if config.restore_file:
+                restore_path = Path(config.restore_file)
+                if not restore_path.exists():
+                    print_colored_message('ERROR', f"Archivo de backup no encontrado: {config.restore_file}", use_colors)
+                    return 1
+            
+            success = orchestrator.restore_database(restore_path)
+            
+            if success:
+                if config.show_progress:
+                    print_colored_message('SUCCESS', 'Restauración completada exitosamente', use_colors)
+                return 0
+            else:
+                if config.show_progress:
+                    print_colored_message('FAILED', 'La operación de restauración falló', use_colors)
+                return 1
         
         if config.show_progress:
             display_header(orchestrator, use_colors)

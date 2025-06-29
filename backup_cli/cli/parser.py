@@ -70,6 +70,18 @@ Ejemplos de uso:
     )
     
     parser.add_argument(
+        '--restore', '-r',
+        action='store_true',
+        help='Restaurar base de datos desde un backup seleccionado'
+    )
+    
+    parser.add_argument(
+        '--restore-file',
+        type=str,
+        help='Ruta específica del archivo de backup a restaurar (omite selección interactiva)'
+    )
+    
+    parser.add_argument(
         '--no-color',
         action='store_true',
         help='Deshabilitar salida coloreada'
@@ -91,6 +103,8 @@ class CLIConfig:
         self.quiet = args.quiet
         self.force = args.force
         self.list = args.list
+        self.restore = args.restore
+        self.restore_file = args.restore_file
         self.no_color = args.no_color
         
         # Configuraciones derivadas
