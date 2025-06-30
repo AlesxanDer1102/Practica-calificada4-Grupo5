@@ -51,7 +51,7 @@ python3 backup_orchestrator.py --list
 # Restauración interactiva
 python3 backup_orchestrator.py --restore
 
-# Restaurar archivo específico  
+# Restaurar archivo específico
 python3 backup_orchestrator.py --restore --restore-file backups/backup.sql
 
 ```
@@ -126,7 +126,7 @@ source .venv/bin/activate
 pip3 install -r requirements.txt
 
 # Ejecutamos nuestra aplicación
-python3 main.py
+python3 app.py
 ```
 
 ## Githooks
