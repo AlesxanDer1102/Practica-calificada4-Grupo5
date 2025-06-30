@@ -22,6 +22,7 @@ k8s/
 ## Antes del Despliegue
 
 1. **Verificar que minikube está ejecutándose**:
+
    ```bash
    # Ejecutamos primeramente
    minikube start
@@ -34,36 +35,45 @@ k8s/
    ```
 
 2. **Construir y preparar la imagen Docker de Python**:
+
    ```bash
    # Configurar Docker para minikube
    eval $(minikube docker-env)
 
-   # Construir imagen localmente
-   docker build -t db_app:latest .
+   # Construir imagen localmente de la bd
+   docker build -f k8s/postgres/Dockerfile-postgres -t custom-postgres:latest .
 
-   # Verificar imagen
-   docker images | grep db_app
+   # Construimos la imagen localmente del backend en pthon
+
+   docker build -f Dockerfile-backend -t miapp:latest .
+
+   # Verificar imagenes
+   docker images | grep -E "custom-postgres|miapp"
    ```
 
 3. **Verificar configuración del deployment**:
-  El archivo `python/deployment.yaml` debe tener:
-  ```yaml
-  yamlcontainers:
-    - name: python-app
-      image: db_app:latest
-      imagePullPolicy: Never
-  ```
-  **Nota importante**: La línea `imagePullPolicy: Never` es esencial para evitar que Kubernetes trate de descargar la imagen desde un registro remoto.
+   El archivo `backend/deployment.yaml` debe tener:
+
+```yaml
+yamlcontainers:
+  - name: backend
+    image: miapp:latest
+    imagePullPolicy: Never
+```
+
+**Nota importante**: La línea `imagePullPolicy: Never` es esencial para evitar que Kubernetes trate de descargar la imagen desde un registro remoto.
 
 ## Instrucciones de despliegue
 
 Podemos desplegar todo automáticamente usando el script `deploy.sh`:
+
 ```bash
 chmod +x ./deploy.sh
 ./deploy.sh
 ```
 
 Para eliminar lo creado podemos igualmente usar el script `cleanup.sh`:
+
 ```bash
 chmod +x ./cleanup.sh
 ./cleanup.sh
@@ -72,6 +82,7 @@ chmod +x ./cleanup.sh
 ## Monitoreo y Solución de Problemas
 
 ### Verificar Estado
+
 ```bash
 # Todos los pods
 kubectl get pods
@@ -79,43 +90,59 @@ kubectl get pods
 # Todos los servicios
 kubectl get services
 
-# Específico de PostgreSQL
-kubectl get pods -l app=postgres
+# Todos los PVCs
+kubectl get pvc
 
-# Específico de la aplicación Python
-kubectl get pods -l app=python-app
+# Revisa logs de Postgres para confirmar init/seed
+kubectl logs statefulset/postgres-0
+
+# Revisa logs de tu backend
+kubectl logs deployment/backend
 ```
 
 ### Ver Registros
+
 ```bash
-# Registros de PostgreSQL
-kubectl logs -l app=postgres
+# Logs de PostgreSQL (StatefulSet)
+kubectl logs statefulset/postgres-0
 
-# Registros de la aplicación Python
-kubectl logs -l app=python-app
+# Logs del backend Python (Deployment)
+kubectl logs deployment/backend
 
-# Seguir registros en tiempo real
-kubectl logs -f -l app=python-app
+# Seguir los logs en tiempo real del backend
+kubectl logs -f deployment/backend
 ```
 
 ### Acceso a la Base de Datos
+
 ```bash
-# Conectar directamente a PostgreSQL
-kubectl exec -it deployment/postgres-deployment -- psql -U postgres -d pc_db
+# Abrir un shell psql dentro del pod de Postgres
+kubectl exec -it statefulset/postgres-0 -- psql -U postgres -d pc_db
 ```
 
 ### Acceso a la aplicación
+
 ```bash
-# Conectar directamente a la aplicación de Python
-kubectl exec -it deployment/python-app-deployment -- bash -c "python3 app.py"
+# Forward del puerto 3000 de tu servicio al localhost
+kubectl port-forward svc/backend-svc 3000:3000
+
+# En otra terminal, probar un endpoint (por ejemplo /health)
+curl http://localhost:3000/health
+
+kubectl exec -it deployment/backend -- bash
+# dentro del pod:
+python3 app.py
 ```
 
-## Variables de Entorno Disponibles para la Aplicación Python
+## Variables de Entorno Disponibles para el Backend Python
+Estas variables se inyectan automáticamente desde el Secret y el StatefulSet:
 
-Tu aplicación Python recibirá estas variables de entorno automáticamente:
+-`DB_HOST=postgres-0.postgres`
 
-- `POSTGRES_HOST=postgres-service`
-- `POSTGRES_PORT=5432`
-- `POSTGRES_USER=postgres`
-- `POSTGRES_PASSWORD=12345`
-- `POSTGRES_DB=pc_db`
+-`DB_PORT=5432`
+
+-`DB_USER=postgres`
+
+-`DB_PASSWORD (desde el Secret postgres-secret)`
+
+-`DB_NAME=pc_db`
