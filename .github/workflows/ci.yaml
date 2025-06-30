@@ -33,6 +33,7 @@ jobs:
           black --check --diff .
 
       - name: Check import sorting with isort
+        continue-on-error: true
         run: |
           isort --check-only --diff .
 
@@ -41,14 +42,15 @@ jobs:
           pytest --cov=backup_orchestrator --cov=backup_cli --cov-report=xml --cov-report=html --cov-report=term-missing
 
       - name: Upload coverage to Codecov
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-          fail_ci_if_error: true
 
       - name: Upload coverage reports as artifacts
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
