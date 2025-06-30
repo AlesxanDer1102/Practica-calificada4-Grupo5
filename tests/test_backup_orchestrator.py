@@ -9,7 +9,48 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from backup_orchestrator import BackupOrchestrator
+from backup_orchestrator import UnifiedBackupOrchestrator
+from backup_cli.cli.parser import CLIConfig
+
+
+def create_test_config(backup_dir, container_name="test_db"):
+    """Helper function to create test configuration"""
+    return CLIConfig(type('Args', (), {
+        'dir': str(backup_dir),
+        'verbose': False,
+        'quiet': True,
+        'force': False,
+        'name': None,
+        'list': False,
+        'restore': False,
+        'restore_file': None,
+        'no_color': True,
+        'container': container_name,
+        'pod': None,
+        'namespace': 'default',
+        'labels': None,
+        'k8s_container': None,
+        'auto_detect': True,
+        'force_docker': True,
+        'force_kubernetes': False,
+        'backup_type': 'auto',
+        'force_full': False,
+        'retention_daily': None,
+        'retention_weekly': None,
+        'retention_monthly': None,
+        'retention_full': None,
+        'apply_retention': False,
+        'retention_dry_run': False,
+        'backup_summary': False,
+        'schedule': None,
+        'schedule_custom': None,
+        'schedule_prefix': 'auto',
+        'retention_days': 7,
+        'notification_email': None,
+        'list_schedules': False,
+        'remove_schedule': None,
+        'test_notifications': False
+    })())
 
 
 class TestBackupOrchestrator:
@@ -21,17 +62,13 @@ class TestBackupOrchestrator:
         """
         Test que verifica la inicialización correcta del orquestador.
         """
-        orchestrator = BackupOrchestrator(
-            container_name="test_container",
-            backup_dir=str(temp_backup_dir),
-            show_progress=False,
-            use_colors=False,
-        )
+        config = create_test_config(temp_backup_dir, "test_container")
+        orchestrator = UnifiedBackupOrchestrator(config)
 
-        assert orchestrator.container_name == "test_container"
+        assert orchestrator.config.container == "test_container"
         assert orchestrator.backup_dir == temp_backup_dir
-        assert orchestrator.show_progress is False
-        assert orchestrator.use_colors is False
+        assert orchestrator.config.show_progress is False
+        assert orchestrator.config.use_colors is False
         assert orchestrator.db_config["user"] == "postgres"
         assert orchestrator.db_config["password"] == "12345"
         assert orchestrator.db_config["database"] == "pc_db"
@@ -98,7 +135,7 @@ class TestBackupOrchestrator:
         assert backups[0]["name"] == "backup_new.sql"
         assert backups[1]["name"] == "backup_old.sql"
 
-    @patch("backup_orchestrator.BackupOrchestrator._check_docker_container")
+    @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     def test_create_backup_container_not_found(
         self, mock_check_container, orchestrator_instance
     ):
@@ -115,7 +152,7 @@ class TestBackupOrchestrator:
         assert result is False
         mock_check_container.assert_called_once()
 
-    @patch("backup_orchestrator.BackupOrchestrator._check_docker_container")
+    @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     @patch("subprocess.run")
     @patch("builtins.open", new_callable=mock_open)
     def test_create_backup_success(
@@ -157,7 +194,7 @@ class TestBackupOrchestrator:
             assert "test_db" in call_args[0][0]
             assert "pg_dump" in call_args[0][0]
 
-    @patch("backup_orchestrator.BackupOrchestrator._check_docker_container")
+    @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     @patch("subprocess.run")
     def test_create_backup_pg_dump_failure(
         self, mock_subprocess, mock_check_container, orchestrator_instance
@@ -183,7 +220,7 @@ class TestBackupOrchestrator:
                 mock_check_container.assert_called_once()
                 mock_subprocess.assert_called_once()
 
-    @patch("backup_orchestrator.BackupOrchestrator._check_docker_container")
+    @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     @patch("subprocess.run")
     def test_create_backup_timeout(
         self, mock_subprocess, mock_check_container, orchestrator_instance
@@ -209,7 +246,7 @@ class TestBackupOrchestrator:
                 # Verificaciones
                 assert result is False
 
-    @patch("backup_orchestrator.BackupOrchestrator._check_docker_container")
+    @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     def test_create_backup_docker_not_found(
         self, mock_check_container, orchestrator_instance
     ):
@@ -264,7 +301,7 @@ class TestBackupOrchestrator:
         Test parametrizado para diferentes escenarios de create_backup().
         """
         with patch(
-            "backup_orchestrator.BackupOrchestrator._check_docker_container"
+            "backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability"
         ) as mock_check:
             mock_check.return_value = True
 

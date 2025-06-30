@@ -11,7 +11,48 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-from backup_orchestrator import BackupOrchestrator
+from backup_orchestrator import UnifiedBackupOrchestrator
+from backup_cli.cli.parser import CLIConfig
+
+
+def create_test_config(backup_dir, container_name="test_db"):
+    """Helper function to create test configuration"""
+    return CLIConfig(type('Args', (), {
+        'dir': str(backup_dir),
+        'verbose': False,
+        'quiet': True,
+        'force': False,
+        'name': None,
+        'list': False,
+        'restore': False,
+        'restore_file': None,
+        'no_color': True,
+        'container': container_name,
+        'pod': None,
+        'namespace': 'default',
+        'labels': None,
+        'k8s_container': None,
+        'auto_detect': True,
+        'force_docker': True,
+        'force_kubernetes': False,
+        'backup_type': 'auto',
+        'force_full': False,
+        'retention_daily': None,
+        'retention_weekly': None,
+        'retention_monthly': None,
+        'retention_full': None,
+        'apply_retention': False,
+        'retention_dry_run': False,
+        'backup_summary': False,
+        'schedule': None,
+        'schedule_custom': None,
+        'schedule_prefix': 'auto',
+        'retention_days': 7,
+        'notification_email': None,
+        'list_schedules': False,
+        'remove_schedule': None,
+        'test_notifications': False
+    })())
 
 
 class TestRestoreIntegration:
@@ -61,12 +102,8 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
     @pytest.fixture
     def orchestrator(self, temp_backup_dir):
         """Fixture que proporciona un orquestador configurado"""
-        return BackupOrchestrator(
-            container_name="test_db",
-            backup_dir=str(temp_backup_dir),
-            show_progress=False,
-            use_colors=False,
-        )
+        config = create_test_config(temp_backup_dir, "test_db")
+        return UnifiedBackupOrchestrator(config)
 
     def create_sample_backup(self, backup_dir: Path, filename: str, content: str):
         """Helper para crear un archivo de backup de prueba"""
