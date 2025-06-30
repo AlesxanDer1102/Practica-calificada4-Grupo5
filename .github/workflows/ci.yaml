@@ -42,7 +42,7 @@ jobs:
           pytest --cov=backup_orchestrator --cov=backup_cli --cov-report=xml --cov-report=html --cov-report=term-missing
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           flags: unittests
@@ -50,7 +50,7 @@ jobs:
           fail_ci_if_error: true
 
       - name: Upload coverage reports as artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: htmlcov/
