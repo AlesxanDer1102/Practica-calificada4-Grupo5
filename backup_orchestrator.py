@@ -13,8 +13,7 @@ from backup_cli.cli.parser import CLIConfig, create_cli_parser
 from backup_cli.environment.detector import Environment, EnvironmentDetector
 from backup_cli.handlers.docker_handler import DockerHandler
 from backup_cli.handlers.kubernetes_handler import KubernetesHandler
-from backup_cli.utils.colors import (Colors, print_colored_message,
-                                     should_use_colors)
+from backup_cli.utils.colors import Colors, print_colored_message, should_use_colors
 from backup_cli.utils.progress import ProgressIndicator
 from backup_cli.utils.validator import BackupNameValidator, format_file_size
 
