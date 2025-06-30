@@ -1,381 +1,430 @@
-# Nombre del proyecto: Orquestador de backups y restauración de datos locales
+# Orquestador de Backups y Restauración
 
-Este proyecto consiste en la creación de una herramienta que orquestre la copia de seguridad y restauración de datos para bases de datos o servicios con estado en un entorno local, usando volúmenes de Docker o persistencia de Kubernetes.
+[![CI](https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5/actions/workflows/ci.yaml/badge.svg)](https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5/actions/workflows/ci.yaml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-supported-blue.svg)](https://kubernetes.io/)
 
-## Avances desarrollados:
+> **Sistema inteligente de backups para PostgreSQL en entornos containerizados**
 
-Contamos con un archivo `docker-compose.yml` con la definición de un contenedor `pc_db` en base a una imagen de `PostgreSQL:15` que nos ayude a probar y ejecutar nuestro proyecto consistentemente. Nuestro contenedor contará con la siguiente configuración:
+Una herramienta robusta y flexible que automatiza la copia de seguridad y restauración de bases de datos PostgreSQL en contenedores Docker y pods Kubernetes, con estrategias inteligentes de backup y políticas de retención configurables.
 
-- **Named Volume:** De nombre `postgres_data` almacenado en la dirección `/var/lib/postgresql/data/` dentro del contenedor.
-- **Variables de entorno:**
-  - _postgres_user_: postgres
-  - _postgres_password_: 12345
-  - _postgres_db_: pc_db
-- **Puerto de conexión**: 5432:5432
+## 🚀 Características Principales
 
-Para contar con acceso a este contenedor podemos ejecutar:
+- **🎯 Multi-Entorno**: Soporte nativo para Docker y Kubernetes con detección automática
+- **🧠 Estrategias Inteligentes**: Backup completo e incremental con decisión automática
+- **📅 Políticas de Retención**: Gestión automática por categorías (daily, weekly, monthly, full)
+- **🔒 Seguridad**: Validación de integridad y confirmación obligatoria para restauraciones
+- **⚡ CLI Intuitiva**: Interfaz de línea de comandos con colores y progreso visual
+- **🔧 Extensible**: Arquitectura modular preparada para nuevos entornos y estrategias
 
-```bash
-# Creamos los contenedores necesarios
-docker-compose up --build
+## 📋 Inicio Rápido
 
-# Accedemos a la interfaz de terminal de la base de datos del contenedor
-docker exec -it pc_db bash -c 'psql -U postgres -d pc_db'
+### Prerrequisitos
 
-# Para eliminar el contendor con sus datos
-docker-compose down -v
-```
+- Python 3.10+
+- Docker o Kubernetes
+- PostgreSQL ejecutándose en contenedor/pod
 
-Contamos tambien con el archivo `backup_orchestrator.py` el cual es el script encargado de realizar los backups de las bases de datos de PostgreSql utilizando docker exec el cual generara una carpeta `backups` y guardara un backup con el nombre formateado con el timestamp maneja errores y da informacion de este, para ejecutarlo se debe hacer lo siguiente
-
-```bash
-# Creamos el backup con el script
-python3 backup_orchestrator.py
-
-# Crear backup con nombre personalizado
-python3 backup_orchestrator.py --name mi_backup_especial
-
-# Listar todos los backups disponibles
-python3 backup_orchestrator.py --list
-
-```
-
-### Características de Seguridad en Restauración
-
-- **Validación de integridad**: Verifica que el archivo de backup sea válido antes de restaurar
-- **Confirmación obligatoria**: Solicita confirmación explícita antes de sobrescribir datos
-- **Información detallada**: Muestra información del backup y base de datos objetivo
-- **Cancelación segura**: Permite cancelar en cualquier momento del proceso
-- **Verificación de contenedor**: Confirma que el contenedor Docker esté disponible
-```
-# Restauración interactiva
-python3 backup_orchestrator.py --restore
-
-# Restaurar archivo específico
-python3 backup_orchestrator.py --restore --restore-file backups/backup.sql
-
-```
-
-Se añadió una pequeña aplicación de demostración para la interacción con la base de datos en `src\` accedida mediante `main.py`.
-Este es un simple sistema CRUD que maneja usuarios, productos y pedidos; se tienen la siguientes relaciones:
-
-### Tabla usuarios
-
-| Nombre de la columna | Tipo de dato | Restricciones |
-| -------------------- | ------------ | ------------- |
-| usuario_id           | INTEGER      | PRIMARY KEY   |
-| nombre               | STRING       | NOT NULL      |
-| apellido             | STRING       | NOT NULL      |
-
-### Tabla productos
-
-| Nombre de la columna | Tipo de dato | Restricciones                 |
-| -------------------- | ------------ | ----------------------------- |
-| producto_id          | INTEGER      | PRIMARY KEY, AUTO_INCREMENT   |
-| nombre_producto      | STRING       | NOT NULL                      |
-| manufacturador       | STRING       | NOT NULL                      |
-| precio               | FLOAT        | NOT NULL, CHECK (precio >= 0) |
-
-### Tabla pedidos
-
-| Nombre de la columna | Tipo de dato | Restricciones                                                    |
-| -------------------- | ------------ | ---------------------------------------------------------------- |
-| pedido_id            | INTEGER      | PRIMARY KEY, AUTO_INCREMENT                                      |
-| usuario_id           | INTEGER      | FOREIGN KEY → usuarios.usuario_id, NOT NULL, ON DELETE CASCADE   |
-| producto_id          | INTEGER      | FOREIGN KEY → productos.producto_id, NOT NULL, ON DELETE CASCADE |
-| cantidad             | INTEGER      | NOT NULL, CHECK (cantidad >= 0)                                  |
-| fecha_pedido         | DATETIME     | NOT NULL, DEFAULT = NOW()                                        |
-
-### Diagrama Entidad-Relación (Representación gráfica)
-
-```
-
-usuarios:                    pedidos:                     productos:
-┌──────────────┐            ┌──────────────┐            ┌──────────────┐
-│ usuario_id   │◄───────────┤ usuario_id   │            │ producto_id  │
-│ nombre       │            │ producto_id  ├───────────►│ nombre_prod. │
-│ apellido     │            │ pedido_id    │            │ manufact.    │
-└──────────────┘            │ cantidad     │            │ precio       │
-                            │ fecha_pedido │            └──────────────┘
-                            └──────────────┘
-```
-
-La aplicación cuenta con funcionalidades de un sistema CRUD básico que muestre los datos almacenados desde nuestro contenedor Docker mediante operaciones como:
-
-- **obtener_info_completa**: Obtiene todos los pedidos con información relacionada de usuarios y productos
-- **crear_usuario**: Crea un nuevo usuario en el sistema con nombre y apellido
-- **crear_producto**: Registra un nuevo producto con nombre, fabricante y precio
-- **crear_pedido**: Genera un nuevo pedido asociando usuario, producto y cantidad
-- **obtener_usuario**: Busca y retorna un usuario específico por su ID
-- **obtener_producto**: Busca y retorna un producto específico por su ID
-- **obtener_pedido**: Busca un pedido específico con toda su información relacionada
-- **eliminar_base_de_datos**: Elimina todas las tablas y datos de la base de datos
-
-### Acceso a la aplicación
-
-Para acceder a la aplicación se requiere de una inicialización de nuestro contenedor Docker con los comandos anteriormente mencionados. Ahora podemos ejecutar la aplicación de terminal mediante los siguientes comandos:
+### Instalación
 
 ```bash
-# Iniciamos un entorno virtual de python3
+# Clonar repositorio
+git clone https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5.git
+cd Practica-calificada4-Grupo5
+
+# Configurar entorno
 python3 -m venv .venv
-
-# Accedemos a este entorno de trabajo
 source .venv/bin/activate
-
-# Instalamos las dependencias necesarias
-pip3 install -r requirements.txt
-
-# Ejecutamos nuestra aplicación
-python3 app.py
+pip install -r requirements.txt
 ```
 
+### Uso Básico
 
-# Orquestrador de Backup
-
-## Funcionalidades
-
-- **Detección automática de entorno**: Docker vs Kubernetes
-- **Estrategias de backup**: Completos e incrementales con decisión automática
-- **Políticas de retención**: Eliminación automática por categorías (daily, weekly, monthly, full)
-- **Multi-entorno**: Contenedores Docker y pods Kubernetes
-
-## Estrategias de Backup
-
-### Backup Completo (Full)
-- Incluye esquema completo y todos los datos
-- Argumentos pg_dump: `--clean --create --verbose`
-- Se ejecuta automáticamente cuando:
-  - No existe backup completo previo
-  - Último backup completo > 7 días
-  - Hay más de 5 backups incrementales desde el último completo
-
-### Backup Incremental
-- Backup optimizado sin metadatos de permisos
-- Argumentos pg_dump: `--verbose --no-owner --no-privileges`
-- Se ejecuta cuando hay un backup completo reciente y pocos incrementales
-
-### Decisión Automática
-- El sistema evalúa el estado actual y decide el tipo apropiado
-- Mantiene balance entre eficiencia y completitud
-- Utiliza metadatos almacenados en `.metadata/backup_state.json`
-
-## Comandos de Backup
-
-### Comandos Básicos
 ```bash
-# Backup automático (decisión inteligente)
+# Backup automático (estrategia inteligente)
 python3 backup_orchestrator.py
-
-# Backup con información detallada
-python3 backup_orchestrator.py --verbose
 
 # Backup con nombre personalizado
-python3 backup_orchestrator.py --name "backup_personalizado"
+python3 backup_orchestrator.py --name "mi_backup_especial"
 
-# Backup en directorio específico
-python3 backup_orchestrator.py --dir /ruta/backups
+# Listar backups disponibles
+python3 backup_orchestrator.py --list
+
+# Restauración interactiva
+python3 backup_orchestrator.py --restore
 ```
 
+## 🏗️ Arquitectura del Sistema
+
+```mermaid
+graph TB
+    subgraph "🏗️ Infrastructure Layer"
+        Docker[Docker Engine]
+        K8s[Kubernetes Cluster]
+        Storage[Persistent Storage]
+    end
+    
+    subgraph "🖥️ Application Layer"
+        WebApp[Flask Web App]
+        CLI[CLI Interface]
+        Database[(PostgreSQL)]
+    end
+    
+    subgraph "🎛️ Orchestration Layer"
+        Orchestrator[Backup Orchestrator]
+        Strategy[Backup Strategy Engine]
+        Handlers[Environment Handlers]
+    end
+    
+    subgraph "⚙️ Management Layer"
+        Detector[Environment Detector]
+        Validator[File Validator]
+        Progress[Progress Monitor]
+        Colors[CLI Colors]
+    end
+    
+    CLI --> Orchestrator
+    WebApp --> Database
+    Orchestrator --> Strategy
+    Orchestrator --> Handlers
+    Orchestrator --> Detector
+    
+    Handlers --> Docker
+    Handlers --> K8s
+    
+    Strategy --> Storage
+    Database --> Storage
+```
+
+## 📚 Documentación Completa
+
+### 📖 Guías Principales
+
+- **[🏗️ Arquitectura del Sistema](docs/architecture.md)** - Diagramas y patrones de diseño
+- **[📖 Referencia de APIs y Comandos](docs/api-reference.md)** - Documentación completa de comandos
+- **[👤 Guía de Usuario](docs/user-guide.md)** - Ejemplos prácticos y casos de uso
+- **[⚖️ Docker vs Kubernetes](docs/docker-vs-kubernetes.md)** - Comparación detallada de entornos
+
+### 🚦 Enlaces Rápidos
+
+- [Instalación y Configuración](#configuración-del-entorno)
+- [Comandos Básicos](#comandos-principales)
+- [Estrategias de Backup](#estrategias-de-backup)
+- [Políticas de Retención](#políticas-de-retención)
+- [Resolución de Problemas](#resolución-de-problemas)
+
+## 🎯 Estrategias de Backup
+
+### Backup Inteligente (Recomendado)
+
+```bash
+# El sistema decide automáticamente el tipo óptimo
+python3 backup_orchestrator.py --verbose
+```
+
+**Criterios de Decisión**:
+- **Full**: Si no existe backup completo previo o han pasado >7 días
+- **Incremental**: Si hay backup completo reciente y <5 incrementales
+
 ### Estrategias Específicas
+
 ```bash
 # Forzar backup completo
 python3 backup_orchestrator.py --force-full
 
-# Especificar tipo explícitamente
-python3 backup_orchestrator.py --backup-type full
+# Backup incremental
 python3 backup_orchestrator.py --backup-type incremental
-python3 backup_orchestrator.py --backup-type auto
 
 # Backup completo con nombre específico
 python3 backup_orchestrator.py --force-full --name "pre_migration"
 ```
 
-### Restauración
+## 📅 Políticas de Retención
+
+### Configuración por Defecto
+
+| Categoría | Límite | Descripción |
+|-----------|--------|-------------|
+| **Daily** | 7 backups | Backups regulares (lunes-sábado) |
+| **Weekly** | 4 backups | Backups creados en domingo |
+| **Monthly** | 12 backups | Backups creados el día 1 del mes |
+| **Full** | 3 backups | Todos los backups completos |
+
+### Configuración Personalizada
+
 ```bash
-# Restauración interactiva (selecciona de lista)
+# Configurar límites específicos
+python3 backup_orchestrator.py \
+  --retention-daily 15 \
+  --retention-weekly 8 \
+  --retention-monthly 24 \
+  --retention-full 10
+
+# Aplicar políticas de retención
+python3 backup_orchestrator.py --apply-retention
+```
+
+## 🌍 Soporte Multi-Entorno
+
+### Docker
+
+```bash
+# Backup en contenedor Docker
+python3 backup_orchestrator.py --container postgres_container
+
+# Con Docker Compose
+docker-compose up -d
+python3 backup_orchestrator.py
+```
+
+### Kubernetes
+
+```bash
+# Backup en pod Kubernetes
+python3 backup_orchestrator.py --pod postgres-0 --namespace production
+
+# Multi-namespace
+for ns in dev staging prod; do
+  python3 backup_orchestrator.py --pod postgres-0 --namespace $ns
+done
+```
+
+## 🔧 Configuración del Entorno
+
+### Variables de Entorno
+
+```bash
+# Configuración básica
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=mi_password
+export POSTGRES_DB=mi_base_datos
+export BACKUP_DIR=./backups
+
+# Configuración de retención
+export RETENTION_DAILY=7
+export RETENTION_WEEKLY=4
+export RETENTION_MONTHLY=12
+export RETENTION_FULL=3
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: pc_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+```
+
+## 📋 Comandos Principales
+
+### Operaciones de Backup
+
+```bash
+# Backup básico
+python3 backup_orchestrator.py
+
+# Con configuraciones específicas
+python3 backup_orchestrator.py \
+  --name "backup_critico" \
+  --force-full \
+  --verbose
+
+# En directorio personalizado
+python3 backup_orchestrator.py --dir /custom/path/backups
+```
+
+### Gestión de Backups
+
+```bash
+# Listar backups
+python3 backup_orchestrator.py --list
+
+# Listar con detalles
+python3 backup_orchestrator.py --list --verbose
+
+# Información del sistema
+python3 backup_orchestrator.py --info
+```
+
+### Restauración
+
+```bash
+# Restauración interactiva
 python3 backup_orchestrator.py --restore
 
 # Restaurar archivo específico
-python3 backup_orchestrator.py --restore --restore-file backups/backup_20250630.sql
+python3 backup_orchestrator.py \
+  --restore \
+  --restore-file backups/mi_backup.sql
 
 # Restauración silenciosa
 python3 backup_orchestrator.py --restore --quiet
 ```
 
-## Políticas de Retención
+## 🔬 Aplicación de Demostración
 
-### Categorías de Retención
-- **Daily**: Backups regulares (lunes a sábado)
-- **Weekly**: Backups creados en domingo
-- **Monthly**: Backups creados el día 1 del mes
-- **Full**: Todos los backups completos
+El proyecto incluye una aplicación Flask de demostración que implementa un sistema CRUD básico:
 
-### Límites por Defecto
-- Daily: 7 backups
-- Weekly: 4 backups
-- Monthly: 12 backups
-- Full: 3 backups
+### Modelo de Datos
 
-### Comandos de Configuración
+```mermaid
+erDiagram
+    usuarios {
+        int usuario_id PK
+        string nombre
+        string apellido
+    }
+    productos {
+        int producto_id PK
+        string nombre_producto
+        string manufacturador
+        float precio
+    }
+    pedidos {
+        int pedido_id PK
+        int usuario_id FK
+        int producto_id FK
+        int cantidad
+        datetime fecha_pedido
+    }
+    
+    usuarios ||--o{ pedidos : "realiza"
+    productos ||--o{ pedidos : "incluye"
+```
+
+### Uso de la Aplicación
+
 ```bash
-# Configurar políticas individuales
-python3 backup_orchestrator.py --retention-daily 10
-python3 backup_orchestrator.py --retention-weekly 6
-python3 backup_orchestrator.py --retention-monthly 24
-python3 backup_orchestrator.py --retention-full 5
+# Inicializar base de datos
+docker-compose up -d
 
-# Configurar múltiples políticas
-python3 backup_orchestrator.py \
-  --retention-daily 15 \
-  --retention-weekly 8 \
-  --retention-monthly 36 \
-  --retention-full 10
+# Ejecutar aplicación
+python3 app.py
+
+# Crear backup de datos de la app
+python3 backup_orchestrator.py --name "app_data"
 ```
 
-### Aplicación de Políticas
+## 🧪 Testing
+
+### Ejecutar Tests
+
 ```bash
-# Ver qué backups se eliminarían (dry run)
-python3 backup_orchestrator.py --retention-dry-run
+# Tests completos con cobertura
+pytest --cov=backup_orchestrator --cov=backup_cli --cov-report=html
 
-# Aplicar políticas de retención
-python3 backup_orchestrator.py --apply-retention
+# Tests específicos
+pytest tests/test_backup_orchestrator.py -v
 
-# Configurar y aplicar en un comando
-python3 backup_orchestrator.py \
-  --retention-daily 5 \
-  --apply-retention
+# Tests de integración
+pytest tests/test_integration_* -v
 ```
 
-## Comandos de Gestión
+### Cobertura Actual
 
-### Información y Listado
+- **Total**: 52% de cobertura de código
+- **Tests**: 112/113 passing (99.1% success rate)
+- **Componentes**: Todos los módulos principales cubiertos
+
+## 🔍 Resolución de Problemas
+
+### Errores Comunes
+
+#### "Container not found"
+
 ```bash
-# Listar backups existentes
-python3 backup_orchestrator.py --list
+# Verificar contenedores disponibles
+docker ps
 
-# Resumen completo de backups y políticas
-python3 backup_orchestrator.py --backup-summary
-
-# Ver ayuda completa
-python3 backup_orchestrator.py --help
+# Usar nombre correcto
+python3 backup_orchestrator.py --container nombre_correcto
 ```
 
-### Opciones de Salida
+#### "Permission denied"
+
 ```bash
-# Ejecución silenciosa
-python3 backup_orchestrator.py --quiet
+# Verificar permisos del directorio
+ls -la backups/
 
-# Sin colores en la salida
-python3 backup_orchestrator.py --no-color
-
-# Sobrescribir backup existente
-python3 backup_orchestrator.py --name "backup" --force
+# Crear directorio con permisos correctos
+mkdir -p backups && chmod 755 backups
 ```
 
-## Comandos Específicos por Entorno
+#### "Database connection failed"
 
-### Kubernetes
 ```bash
-# Detección automática (busca app=postgres)
-python3 backup_orchestrator.py
+# Verificar que el contenedor esté ejecutándose
+docker exec -it postgres_container psql -U postgres -l
 
-# Pod específico
-python3 backup_orchestrator.py --pod postgres-0
-
-# Namespace específico
-python3 backup_orchestrator.py --pod postgres-0 --namespace production
-
-# Selección por labels
-python3 backup_orchestrator.py --labels app=postgres,version=13
-
-# Contenedor específico en pod
-python3 backup_orchestrator.py --pod postgres-0 --k8s-container postgres
-
-# Forzar entorno Kubernetes
-python3 backup_orchestrator.py --force-kubernetes
+# Verificar variables de entorno
+echo $POSTGRES_USER $POSTGRES_DB
 ```
 
-### Docker
+### Logging y Debug
+
 ```bash
-# Detección automática de contenedores PostgreSQL
-python3 backup_orchestrator.py
+# Modo verbose para más información
+python3 backup_orchestrator.py --verbose
 
-# Contenedor específico
-python3 backup_orchestrator.py --container postgres_container
+# Verificar logs del contenedor
+docker logs postgres_container
 
-# Forzar entorno Docker
-python3 backup_orchestrator.py --force-docker
+# Información del sistema
+python3 backup_orchestrator.py --info
 ```
 
-## Combinaciones de Comandos
+## 🤝 Contribución
 
-### Flujo de Desarrollo
+### Desarrollo
+
 ```bash
-# Backup antes de cambios importantes
-python3 backup_orchestrator.py --force-full --name "pre_changes"
+# Configurar entorno de desarrollo
+git clone https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5.git
+cd Practica-calificada4-Grupo5
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-# Backup diario automático
-python3 backup_orchestrator.py
+# Ejecutar tests
+pytest
 
-# Limpieza semanal
-python3 backup_orchestrator.py --retention-dry-run
-python3 backup_orchestrator.py --apply-retention
+# Verificar formateo
+black --check .
+isort --check-only .
+flake8 .
 ```
 
-### Flujo de Producción
-```bash
-# Configuración robusta
-python3 backup_orchestrator.py \
-  --retention-daily 30 \
-  --retention-weekly 12 \
-  --retention-monthly 24 \
-  --retention-full 12 \
-  --force-full \
-  --name "prod_$(date +%Y%m%d)"
+### Arquitectura Extensible
 
-# Monitoreo regular
-python3 backup_orchestrator.py --backup-summary
-```
+- **Nuevos Entornos**: Implementar nueva clase `Handler`
+- **Nuevas Estrategias**: Extender `BackupStrategy`
+- **Nuevas Interfaces**: Utilizar `UnifiedBackupOrchestrator` existente
 
-### Mantenimiento
-```bash
-# Revisión completa del sistema
-python3 backup_orchestrator.py --backup-summary
-python3 backup_orchestrator.py --retention-dry-run
-python3 backup_orchestrator.py --apply-retention
-python3 backup_orchestrator.py --list
-```
+## 📄 Licencia
 
-## Estructura de Archivos
+Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
 
-```
-backups/
-├── backup_20250630_143022_full.sql
-├── backup_20250701_020000_incremental.sql
-└── .metadata/
-    ├── backup_state.json
-    ├── backup_20250630_143022_full.json
-    └── backup_20250701_020000_incremental.json
-```
+## 🙋 Soporte
 
-## Configuración de Base de Datos
+- **Documentación**: Ver [docs/](docs/) para guías detalladas
+- **Issues**: [GitHub Issues](https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5/issues)
+- **Ejemplos**: Ver [docs/user-guide.md](docs/user-guide.md) para casos de uso
 
-El sistema utiliza automáticamente:
-- Database: `pc_db`
-- Usuario: `postgres`
-- Password: `12345`
-- Detección automática de pod `postgres-0` con label `app=postgres`
+---
 
-
-## Githooks
-
-Para este proyecto estaremos utilizando githooks para validar commits y push, para poder tenerlo activo localmente usa el siguiente comando
-
-Para dar permisos\
-```
-chmod +x .githooks/setup.sh
-```
-
-```
-.githooks/setup.sh
-```
+**Desarrollado con ❤️ para simplificar las operaciones de backup en entornos containerizados**
