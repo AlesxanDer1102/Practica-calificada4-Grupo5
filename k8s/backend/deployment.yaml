@@ -1,54 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: python-app-deployment
+  name: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: python-app
+      app: backend
   template:
     metadata:
       labels:
-        app: python-app
+        app: backend
     spec:
       containers:
-        - name: python-app
-          image: db_app:latest
+        - name: backend
+          image: miapp:latest
           imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 3000
           env:
             - name: DB_HOST
-              value: "postgres-service"
+              value: postgres-0.postgres
             - name: DB_PORT
               value: "5432"
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
+            - name: DB_NAME
+              value: pc_db
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_DB
-          resources:
-            requests:
-              memory: "128Mi"
-              cpu: "100m"
-            limits:
-              memory: "256Mi"
-              cpu: "200m"
-      initContainers:
-        - name: wait-for-postgres
-          image: busybox:1.35
-          command:
-            [
-              "sh",
-              "-c",
-              "until nc -z postgres-service 5432; do echo waiting for postgres; sleep 2; done;",
-            ]
