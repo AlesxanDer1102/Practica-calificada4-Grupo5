@@ -9,8 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from backup_cli.cli.parser import CLIConfig, create_cli_parser
-from backup_cli.utils.colors import (Colors, print_colored_message,
-                                     should_use_colors)
+from backup_cli.utils.colors import Colors, print_colored_message, should_use_colors
 from backup_cli.utils.progress import ProgressIndicator
 
 
