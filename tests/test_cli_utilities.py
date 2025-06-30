@@ -2,13 +2,16 @@
 Tests unitarios para las utilidades CLI del proyecto.
 """
 
-import pytest
 import sys
 from io import StringIO
-from unittest.mock import patch, Mock
-from backup_cli.utils.colors import Colors, should_use_colors, print_colored_message
+from unittest.mock import Mock, patch
+
+import pytest
+
+from backup_cli.cli.parser import CLIConfig, create_cli_parser
+from backup_cli.utils.colors import (Colors, print_colored_message,
+                                     should_use_colors)
 from backup_cli.utils.progress import ProgressIndicator
-from backup_cli.cli.parser import create_cli_parser, CLIConfig
 
 
 class TestColors:

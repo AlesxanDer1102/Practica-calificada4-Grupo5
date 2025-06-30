@@ -1,12 +1,12 @@
+from typing import List, Optional
+
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.strategy_options import joinedload
-from sqlalchemy import text
 from sqlalchemy.sql.expression import cast
-from typing import Optional, List
-
-from src.models.usuario import Usuario
-from src.models.producto import Producto
 from src.models.pedido import Pedido
+from src.models.producto import Producto
+from src.models.usuario import Usuario
 
 
 def obtener_info_completa(db: Session) -> List[Pedido]:

@@ -1,8 +1,8 @@
-import subprocess
 import logging
 import os
+import subprocess
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class Environment(Enum):

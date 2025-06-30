@@ -1,4 +1,4 @@
-from .colors import Colors, should_use_colors, print_colored_message
+from .colors import Colors, print_colored_message, should_use_colors
 from .progress import ProgressIndicator
 from .validator import BackupNameValidator, format_file_size
 

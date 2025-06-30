@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 
-import os
 import logging
+import os
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from backup_cli.utils.colors import Colors, should_use_colors, print_colored_message
-from backup_cli.utils.progress import ProgressIndicator
-from backup_cli.utils.validator import BackupNameValidator, format_file_size
-from backup_cli.cli.parser import create_cli_parser, CLIConfig
-from backup_cli.environment.detector import EnvironmentDetector, Environment
+from backup_cli.cli.parser import CLIConfig, create_cli_parser
+from backup_cli.environment.detector import Environment, EnvironmentDetector
 from backup_cli.handlers.docker_handler import DockerHandler
 from backup_cli.handlers.kubernetes_handler import KubernetesHandler
+from backup_cli.utils.colors import (Colors, print_colored_message,
+                                     should_use_colors)
+from backup_cli.utils.progress import ProgressIndicator
+from backup_cli.utils.validator import BackupNameValidator, format_file_size
 
 
 class UnifiedBackupOrchestrator:

@@ -3,11 +3,13 @@ Configuración compartida para todos los tests del proyecto.
 Incluye fixtures y configuraciones globales de pytest.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
+
 from backup_orchestrator import BackupOrchestrator
 
 

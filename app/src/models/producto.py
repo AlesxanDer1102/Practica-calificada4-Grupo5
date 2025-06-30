@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, Float, String, CheckConstraint
+from sqlalchemy import CheckConstraint, Column, Float, Integer, String
 from sqlalchemy.orm import relationship
-
 from src.core.database import Base
 
 

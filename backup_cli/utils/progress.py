@@ -3,6 +3,7 @@ Utilidades para indicadores de progreso en terminal
 """
 
 import time
+
 from .colors import Colors
 
 
