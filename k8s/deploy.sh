@@ -1,29 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+  set -e
+  minikube start --driver=docker
+  eval $(minikube docker-env)
 
-# Script de despliegue para recursos de Kubernetes
-set -e
-echo "Desplegando PostgreSQL + Aplicación Python en Kubernetes..."
+  docker build -f k8s/postgres/Dockerfile -t custom-postgres:latest .
+  docker build -f k8s/backend/Dockerfile -t miapp:dev .
 
-kubectl apply -f postgres/secret.yaml
-kubectl apply -f postgres/configmap.yaml
-kubectl apply -f postgres/pvc.yaml
-kubectl apply -f postgres/deployment.yaml
-kubectl apply -f postgres/service.yaml
-
-echo "Esperando a que PostgreSQL esté listo..."
-kubectl wait --for=condition=ready pod -l app=postgres --timeout=300s
-
-echo "6. Desplegando aplicación Python..."
-kubectl apply -f python/deployment.yaml
-
-echo "Despliegue completado!"
-
-echo ""
-echo "Verificar estado con:"
-echo "  kubectl get pods"
-echo "  kubectl get services"
-
-echo ""
-echo "Ver logs con:"
-echo "  kubectl logs -l app=postgres"
-echo "  kubectl logs -l app=python-app"
+  kubectl apply -f k8s/postgres/
+  kubectl apply -f k8s/backend/
