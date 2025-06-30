@@ -3,13 +3,13 @@ Gestor de estrategias de backup y políticas de retención
 Implementación sencilla que soporta backups completos e incrementales
 """
 
-import os
+import hashlib
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
-import hashlib
 
 
 class BackupStrategy:

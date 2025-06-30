@@ -10,8 +10,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backup_orchestrator import UnifiedBackupOrchestrator
 from backup_cli.cli.parser import CLIConfig
+from backup_orchestrator import UnifiedBackupOrchestrator
 
 
 @pytest.fixture
