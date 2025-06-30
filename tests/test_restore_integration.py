@@ -231,7 +231,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
 
         mock_input.return_value = "si"
 
-        result = orchestrator.confirm_restore_operation(backup_path)
+        result = orchestrator.confirm_restore_operation(backup_path, "pc_db")
         assert result is True
 
     @patch("builtins.input")
@@ -245,7 +245,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
 
         mock_input.return_value = "no"
 
-        result = orchestrator.confirm_restore_operation(backup_path)
+        result = orchestrator.confirm_restore_operation(backup_path, "pc_db")
         assert result is False
 
     @patch("subprocess.run")
@@ -271,7 +271,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             Mock(returncode=0, stderr=""),  # psql (restaurar)
         ]
 
-        with patch.object(orchestrator, "_check_docker_container", return_value=True):
+        with patch.object(orchestrator, "_check_target_availability", return_value=True):
             result = orchestrator.restore_database(backup_path)
 
         assert result is True
@@ -305,7 +305,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             returncode=1, stderr="Database connection failed"
         )
 
-        with patch.object(orchestrator, "_check_docker_container", return_value=True):
+        with patch.object(orchestrator, "_check_target_availability", return_value=True):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False
@@ -323,7 +323,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
         # Configurar mocks
         mock_input.return_value = "si"  # Confirmar restauración
 
-        with patch.object(orchestrator, "_check_docker_container", return_value=False):
+        with patch.object(orchestrator, "_check_target_availability", return_value=False):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False
@@ -376,7 +376,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             cmd=["psql"], timeout=300
         )
 
-        with patch.object(orchestrator, "_check_docker_container", return_value=True):
+        with patch.object(orchestrator, "_check_target_availability", return_value=True):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False
@@ -399,7 +399,7 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
 
         with patch("subprocess.run", return_value=Mock(returncode=0, stderr="")):
             with patch.object(
-                orchestrator, "_check_docker_container", return_value=True
+                orchestrator, "_check_target_availability", return_value=True
             ):
                 result = orchestrator.restore_database()
 

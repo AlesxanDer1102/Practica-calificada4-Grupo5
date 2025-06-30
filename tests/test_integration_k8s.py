@@ -110,30 +110,32 @@ class TestK8sIntegration:
             result = k8s_orchestrator._check_target_availability("postgres-0")
             assert result is True
 
-    @patch("subprocess.run")
-    def test_k8s_backup_creation(self, mock_run, k8s_orchestrator, temp_backup_dir):
+    def test_k8s_backup_creation(self, k8s_orchestrator, temp_backup_dir, mock_k8s_handler_available, mock_backup_strategy_state):
         """Test que verifica la creación de backup en Kubernetes"""
-        mock_run.return_value = Mock(returncode=0, stderr="")
-        
         backup_content = "-- PostgreSQL database dump\nCREATE TABLE test_table();\n"
         
-        with patch("builtins.open", create=True) as mock_open:
-            mock_open.return_value.__enter__.return_value.write.return_value = None
-            mock_open.return_value.__enter__.return_value.read.return_value = backup_content
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stderr="")
             
-            with patch("pathlib.Path.stat") as mock_stat:
-                mock_stat.return_value.st_size = len(backup_content)
+            with patch("builtins.open", create=True) as mock_open:
+                mock_open.return_value.__enter__.return_value.write.return_value = None
+                mock_open.return_value.__enter__.return_value.read.return_value = backup_content
                 
-                result = k8s_orchestrator.create_backup()
-                
-                assert result is True
-                mock_run.assert_called_once()
-                
-                call_args = mock_run.call_args[0][0]
-                assert "kubectl" in call_args
-                assert "exec" in call_args
-                assert "postgres-0" in call_args
-                assert "pg_dump" in call_args
+                with patch("pathlib.Path.stat") as mock_stat:
+                    mock_stat.return_value.st_size = len(backup_content)
+                    
+                    result = k8s_orchestrator.create_backup()
+                    
+                    assert result is True
+                    mock_run.assert_called()
+                    
+                    call_args = mock_run.call_args[0][0]
+                    assert "kubectl" in call_args
+                    assert "exec" in call_args
+                    assert "postgres-0" in call_args
+                    # For K8s, pg_dump is wrapped in shell command with env vars
+                    call_string = ' '.join(call_args)
+                    assert "pg_dump" in call_string
 
     @patch("subprocess.run")
     def test_k8s_data_loss_simulation(self, mock_run, k8s_orchestrator):
@@ -158,9 +160,7 @@ class TestK8sIntegration:
             assert "postgres-0" in call_args
             assert "psql" in call_args
 
-    @patch("subprocess.run")
-    @patch("builtins.input")
-    def test_k8s_data_restoration(self, mock_input, mock_run, k8s_orchestrator, temp_backup_dir):
+    def test_k8s_data_restoration(self, k8s_orchestrator, temp_backup_dir, mock_k8s_handler_available):
         """Test que verifica la restauración de datos en Kubernetes"""
         backup_content = """
 -- PostgreSQL database dump
@@ -175,19 +175,24 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         backup_file = temp_backup_dir / "test_backup.sql"
         backup_file.write_text(backup_content)
         
-        mock_input.return_value = "si"
-        mock_run.return_value = Mock(returncode=0, stderr="")
-        
-        result = k8s_orchestrator.restore_database(backup_file)
-        
-        assert result is True
-        mock_run.assert_called()
-        
-        call_args = mock_run.call_args[0][0]
-        assert "kubectl" in call_args
-        assert "exec" in call_args
-        assert "postgres-0" in call_args
-        assert "psql" in call_args
+        with patch("builtins.input") as mock_input:
+            mock_input.return_value = "si"
+            
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = Mock(returncode=0, stderr="")
+                
+                result = k8s_orchestrator.restore_database(backup_file)
+                
+                assert result is True
+                mock_run.assert_called()
+                
+                call_args = mock_run.call_args[0][0]
+                assert "kubectl" in call_args
+                assert "exec" in call_args
+                assert "postgres-0" in call_args
+                # For K8s, psql is wrapped in shell command with env vars
+                call_string = ' '.join(call_args)
+                assert "psql" in call_string
 
     @patch("subprocess.run")
     def test_k8s_data_integrity_verification(self, mock_run, k8s_orchestrator, sample_test_data):

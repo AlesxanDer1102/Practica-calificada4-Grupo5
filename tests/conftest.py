@@ -91,3 +91,56 @@ def orchestrator_instance(temp_backup_dir):
     })())
     
     return UnifiedBackupOrchestrator(test_config)
+
+
+@pytest.fixture
+def mock_docker_handler_available():
+    """
+    Fixture que simula un handler Docker con contenedor disponible.
+    Mock the Docker handler methods to return proper status.
+    """
+    with patch("backup_cli.handlers.docker_handler.DockerHandler.check_container_status") as mock_status:
+        "Retorna True para indicar que el contenedor está disponible"
+        mock_status.return_value = True
+        yield mock_status
+
+
+@pytest.fixture
+def mock_k8s_handler_available():
+    """
+    Fixture que simula un handler Kubernetes con pod disponible.
+    Mock the Kubernetes handler methods to return proper status.
+    """
+    with patch("backup_cli.handlers.kubernetes_handler.KubernetesHandler.check_pod_status") as mock_status:
+        mock_status.return_value = True
+        yield mock_status
+
+
+@pytest.fixture
+def mock_backup_strategy_state():
+    """
+    Fixture que simula el estado del backup strategy con archivo JSON válido.
+    """
+    with patch("backup_cli.backup_strategy.BackupStrategy.load_backup_state") as mock_load:
+        mock_load.return_value = {
+            'last_full_backup': None,
+            'last_incremental_backup': None,
+            'schema_hash': None,
+            'backups': []
+        }
+        with patch("backup_cli.backup_strategy.BackupStrategy.save_backup_state") as mock_save:
+            mock_save.return_value = None
+            yield mock_load, mock_save
+
+
+@pytest.fixture
+def sample_test_data():
+    """
+    Fixture que proporciona datos de prueba de ejemplo.
+    """
+    return {
+        'test_table': [
+            {'id': 1, 'name': 'Test Item 1', 'value': 'test_value_1'},
+            {'id': 2, 'name': 'Test Item 2', 'value': 'test_value_2'}
+        ]
+    }

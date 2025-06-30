@@ -259,13 +259,22 @@ class TestCLIParser:
         args = parser.parse_args([])  # Sin argumentos
 
         assert args.name is None
-        assert args.container == "pc_db"
+        assert args.container is None  # Container doesn't have a default value
         assert args.dir == "backups"
         assert args.verbose is False
         assert args.quiet is False
         assert args.force is False
         assert args.list is False
+        assert args.restore is False
+        assert args.restore_file is None
         assert args.no_color is False
+        assert args.pod is None
+        assert args.namespace == "default"
+        assert args.labels is None
+        assert args.k8s_container is None
+        assert args.auto_detect is False
+        assert args.force_docker is False
+        assert args.force_kubernetes is False
 
     def test_cli_parser_with_arguments(self):
         """
@@ -345,6 +354,34 @@ class TestCLIConfig:
         mock_args.force = True
         mock_args.list = False
         mock_args.no_color = False
+        
+        # Add missing required attributes for CLIConfig
+        mock_args.restore = False
+        mock_args.restore_file = None
+        mock_args.pod = None
+        mock_args.namespace = "default"
+        mock_args.labels = None  # This needs to be None or string, not Mock
+        mock_args.k8s_container = None
+        mock_args.auto_detect = False
+        mock_args.force_docker = False
+        mock_args.force_kubernetes = False
+        mock_args.backup_type = "auto"
+        mock_args.force_full = False
+        mock_args.retention_daily = None
+        mock_args.retention_weekly = None
+        mock_args.retention_monthly = None
+        mock_args.retention_full = None
+        mock_args.apply_retention = False
+        mock_args.retention_dry_run = False
+        mock_args.backup_summary = False
+        mock_args.schedule = None
+        mock_args.schedule_custom = None
+        mock_args.schedule_prefix = "auto"
+        mock_args.retention_days = 7
+        mock_args.notification_email = None
+        mock_args.list_schedules = False
+        mock_args.remove_schedule = None
+        mock_args.test_notifications = False
 
         config = CLIConfig(mock_args)
 
@@ -373,6 +410,34 @@ class TestCLIConfig:
         mock_args.force = False
         mock_args.list = False
         mock_args.no_color = True
+        
+        # Add missing required attributes for CLIConfig
+        mock_args.restore = False
+        mock_args.restore_file = None
+        mock_args.pod = None
+        mock_args.namespace = "default"
+        mock_args.labels = None
+        mock_args.k8s_container = None
+        mock_args.auto_detect = False
+        mock_args.force_docker = False
+        mock_args.force_kubernetes = False
+        mock_args.backup_type = "auto"
+        mock_args.force_full = False
+        mock_args.retention_daily = None
+        mock_args.retention_weekly = None
+        mock_args.retention_monthly = None
+        mock_args.retention_full = None
+        mock_args.apply_retention = False
+        mock_args.retention_dry_run = False
+        mock_args.backup_summary = False
+        mock_args.schedule = None
+        mock_args.schedule_custom = None
+        mock_args.schedule_prefix = "auto"
+        mock_args.retention_days = 7
+        mock_args.notification_email = None
+        mock_args.list_schedules = False
+        mock_args.remove_schedule = None
+        mock_args.test_notifications = False
 
         config = CLIConfig(mock_args)
 
@@ -392,6 +457,34 @@ class TestCLIConfig:
         mock_args.force = False
         mock_args.list = False
         mock_args.no_color = False
+        
+        # Add missing required attributes for CLIConfig
+        mock_args.restore = False
+        mock_args.restore_file = None
+        mock_args.pod = None
+        mock_args.namespace = "default"
+        mock_args.labels = None
+        mock_args.k8s_container = None
+        mock_args.auto_detect = False
+        mock_args.force_docker = False
+        mock_args.force_kubernetes = False
+        mock_args.backup_type = "auto"
+        mock_args.force_full = False
+        mock_args.retention_daily = None
+        mock_args.retention_weekly = None
+        mock_args.retention_monthly = None
+        mock_args.retention_full = None
+        mock_args.apply_retention = False
+        mock_args.retention_dry_run = False
+        mock_args.backup_summary = False
+        mock_args.schedule = None
+        mock_args.schedule_custom = None
+        mock_args.schedule_prefix = "auto"
+        mock_args.retention_days = 7
+        mock_args.notification_email = None
+        mock_args.list_schedules = False
+        mock_args.remove_schedule = None
+        mock_args.test_notifications = False
 
         config = CLIConfig(mock_args)
         repr_str = repr(config)
