@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
 
+# Importar módulos separados desde backup_cli
 from backup_cli.utils.colors import Colors, should_use_colors, print_colored_message
 from backup_cli.utils.progress import ProgressIndicator
 from backup_cli.utils.validator import BackupNameValidator, format_file_size
@@ -15,6 +16,7 @@ from backup_cli.cli.parser import create_cli_parser, CLIConfig
 from backup_cli.environment.detector import EnvironmentDetector, Environment
 from backup_cli.handlers.docker_handler import DockerHandler
 from backup_cli.handlers.kubernetes_handler import KubernetesHandler
+from backup_cli.backup_strategy import BackupStrategy
 
 
 class UnifiedBackupOrchestrator:
@@ -27,25 +29,48 @@ class UnifiedBackupOrchestrator:
         self.config = config
         self.backup_dir = Path(config.backup_dir)
         self.backup_dir.mkdir(exist_ok=True)
-        
+
         if not config.use_colors:
             Colors.disable()
 
+        # Configuración de base de datos específica del proyecto
         self.db_config = {
             "user": "postgres",
             "password": "12345",  # Coincide con postgres-secret
             "database": "pc_db",   # Coincide con POSTGRES_DB del StatefulSet
         }
 
+        # Detectar entorno
         self.env_detector = EnvironmentDetector()
         self.environment = self._determine_environment()
 
+        # Inicializar handler apropiado
         self._initialize_handler()
 
+        # Inicializar gestor de estrategias de backup
+        self.backup_strategy = BackupStrategy(str(self.backup_dir))
+
+        # Configurar políticas de retención si se especificaron
+        retention_updates = {}
+        if config.retention_daily:
+            retention_updates['daily'] = config.retention_daily
+        if config.retention_weekly:
+            retention_updates['weekly'] = config.retention_weekly
+        if config.retention_monthly:
+            retention_updates['monthly'] = config.retention_monthly
+        if config.retention_full:
+            retention_updates['full'] = config.retention_full
+
+        if retention_updates:
+            self.backup_strategy.configure_retention_policy(**retention_updates)
+
+        # Configurar logging
         self.setup_logging()
 
     def _determine_environment(self) -> Environment:
-
+        """
+        Determina el entorno a usar basado en configuración y detección
+        """
         preferred = self.config.get_preferred_environment()
 
         if preferred == "docker":
@@ -57,6 +82,7 @@ class UnifiedBackupOrchestrator:
                 self._print_message('INFO', 'Forzando uso de Kubernetes')
             return Environment.KUBERNETES
         else:
+            # Auto-detectar
             if self.config.verbose:
                 self._print_message('INFO', 'Detectando entorno automáticamente...')
 
@@ -138,6 +164,7 @@ class UnifiedBackupOrchestrator:
         if self.config.container:
             return self.config.container
 
+        # Buscar automáticamente o interactivamente
         return self.handler.select_container_interactive()
 
     def _resolve_kubernetes_target(self) -> Optional[str]:
@@ -148,9 +175,11 @@ class UnifiedBackupOrchestrator:
         if self.config.pod:
             return self.config.pod
 
+        # Si no se especifica pod, buscar usando labels del proyecto
         default_labels = {'app': 'postgres'}  # Label del StatefulSet
         labels_to_use = self.config.labels if self.config.labels else default_labels
 
+        # Buscar usando labels o interactivamente
         return self.handler.select_pod_interactive(labels_to_use)
 
     def _check_target_availability(self, target: str) -> bool:
@@ -199,7 +228,7 @@ class UnifiedBackupOrchestrator:
         if not backups:
             self._print_message('ERROR', "No se encontraron backups disponibles")
             raise ValueError("No hay backups disponibles para restaurar")
-        
+
         self._print_message('INFO', "Backups disponibles:")
         print()
 
@@ -245,9 +274,11 @@ class UnifiedBackupOrchestrator:
                 self._print_message('ERROR', "El archivo de backup está vacío")
                 return False
 
+            # Verificar que el archivo contiene comandos SQL básicos
             with open(backup_path, 'r', encoding='utf-8') as f:
                 content = f.read(1000)  # Leer primeros 1000 caracteres
 
+            # Verificar que contiene elementos típicos de un dump de PostgreSQL
             required_patterns = ['CREATE', 'INSERT', '--']
             found_patterns = [pattern for pattern in required_patterns if pattern in content.upper()]
 
@@ -293,8 +324,25 @@ class UnifiedBackupOrchestrator:
 
     def create_backup(self, custom_name: str = None, force_overwrite: bool = False) -> bool:
         """
-        Crea un backup de la base de datos
+        Crea un backup de la base de datos con estrategia automática
         """
+        # Determinar tipo de backup
+        backup_type = 'full'
+        if self.config.backup_type == 'auto':
+            backup_type = self.backup_strategy.determine_backup_type(self.config.force_full)
+        elif self.config.backup_type in ['full', 'incremental']:
+            backup_type = self.config.backup_type
+        elif self.config.force_full:
+            backup_type = 'full'
+
+        # Mostrar recomendación si es automático
+        if self.config.backup_type == 'auto' and self.config.show_progress:
+            recommendation = self.backup_strategy.get_next_backup_recommendation()
+            self._print_message('INFO', f"Tipo de backup recomendado: {recommendation['type']}")
+            self._print_message('INFO', f"Razón: {recommendation['reason']}")
+
+        start_time = time.time()
+
         try:
             backup_filename, name_modified = BackupNameValidator.resolve_backup_filename(
                 self.backup_dir, custom_name, force_overwrite
@@ -304,21 +352,30 @@ class UnifiedBackupOrchestrator:
             self.logger.error(str(e))
             return False
 
+        # Añadir sufijo del tipo de backup
+        if not custom_name:
+            base_name = backup_filename.replace('.sql', '')
+            backup_filename = f"{base_name}_{backup_type}.sql"
+
         backup_path = self.backup_dir / backup_filename
 
+        # Mostrar advertencia de modificación de nombre
         if name_modified:
             self._print_message('WARNING', f"Nombre de backup modificado para evitar conflicto: {backup_filename}")
 
+        # Resolver objetivo
         target = self._resolve_target()
         if not target:
             self._print_message('ERROR', "No se pudo resolver el objetivo del backup")
             return False
 
+        # Indicadores de progreso
         target_type = "contenedor" if self.environment == Environment.DOCKER else "pod"
         target_check = ProgressIndicator(f"Verificando {target_type} '{target}'", self.config.use_colors)
-        backup_progress = ProgressIndicator(f"Creando backup '{backup_filename}'", self.config.use_colors)
+        backup_progress = ProgressIndicator(f"Creando backup {backup_type} '{backup_filename}'", self.config.use_colors)
 
         try:
+            # Verificar disponibilidad del objetivo
             if self.config.show_progress:
                 target_check.start()
                 time.sleep(0.5)
@@ -334,45 +391,64 @@ class UnifiedBackupOrchestrator:
             if self.config.show_progress:
                 target_check.complete(True)
 
-            self.logger.info(f"Iniciando el backup: {backup_filename}")
+            self.logger.info(f"Iniciando backup {backup_type}: {backup_filename}")
 
-            cmd = [
-                "pg_dump",
-                "-U", self.db_config["user"],
-                "-d", self.db_config["database"],
-                "--clean",
-                "--create"
-            ]
+            # Preparar comando pg_dump con estrategia específica
+            cmd = ["pg_dump", "-U", self.db_config["user"], "-d", self.db_config["database"]]
+            cmd.extend(self.backup_strategy.get_backup_command_args(backup_type))
 
+            # Iniciar progreso de backup
             if self.config.show_progress:
                 backup_progress.start()
 
+            # Configurar entorno
             env = os.environ.copy()
             env["PGPASSWORD"] = self.db_config["password"]
 
+            # Ejecutar comando según el entorno
             if self.environment == Environment.DOCKER:
                 result = self.handler.execute_command(target, cmd)
             elif self.environment == Environment.KUBERNETES:
                 container = self._get_postgres_container_name(target)
-
+                # Para Kubernetes, manejar variables de entorno directamente
                 env_vars = [f"PGPASSWORD={self.db_config['password']}"]
                 full_cmd = ['sh', '-c', f"export {' '.join(env_vars)} && {' '.join(cmd)}"]
                 result = self.handler.execute_command(target, full_cmd, container)
 
+            # Simular progreso
             if self.config.show_progress:
                 backup_progress.simulate_work()
 
             if result.returncode == 0:
-
+                # Escribir el backup al archivo
                 with open(backup_path, 'w', encoding='utf-8') as f:
                     f.write(result.stdout)
 
                 file_size = backup_path.stat().st_size
-                self.logger.info(f"Backup completado exitosamente: {backup_filename} ({file_size} bytes)")
+                duration = time.time() - start_time
+
+                # Crear metadatos del backup
+                metadata = self.backup_strategy.create_backup_metadata(
+                    backup_filename.replace('.sql', ''),
+                    backup_type,
+                    file_size,
+                    duration
+                )
+
+                # Actualizar estado
+                self.backup_strategy.update_backup_state(
+                    backup_filename.replace('.sql', ''),
+                    backup_type,
+                    metadata
+                )
+
+                self.logger.info(f"Backup {backup_type} completado exitosamente: {backup_filename} ({file_size} bytes)")
 
                 if self.config.show_progress:
                     backup_progress.complete(True)
+                    self._print_message('INFO', f"Tipo de backup: {backup_type.upper()}")
                     self._print_message('INFO', f"Tamaño del backup: {format_file_size(file_size)}")
+                    self._print_message('INFO', f"Duración: {duration:.1f} segundos")
                     self._print_message('INFO', f"Ubicación: {backup_path.absolute()}")
 
                 return True
@@ -401,20 +477,25 @@ class UnifiedBackupOrchestrator:
         Restaura la base de datos desde un archivo de backup
         """
         try:
+            # Si no se proporciona un backup, seleccionar interactivamente
             if backup_path is None:
                 backup_path = self.select_backup_interactive()
 
+            # Validar integridad del backup
             if not self.validate_backup_integrity(backup_path):
                 return False
 
+            # Resolver objetivo
             target = self._resolve_target()
             if not target:
                 self._print_message('ERROR', "No se pudo resolver el objetivo de la restauración")
                 return False
 
+            # Solicitar confirmación
             if not self.confirm_restore_operation(backup_path, target):
                 return False
 
+            # Verificar disponibilidad del objetivo
             target_type = "contenedor" if self.environment == Environment.DOCKER else "pod"
             target_check = ProgressIndicator(f"Verificando {target_type} '{target}'", self.config.use_colors)
             restore_progress = ProgressIndicator(f"Restaurando desde '{backup_path.name}'", self.config.use_colors)
@@ -436,18 +517,22 @@ class UnifiedBackupOrchestrator:
 
             self.logger.info(f"Iniciando restauración desde: {backup_path.name}")
 
+            # Preparar comando psql
             cmd = [
                 "psql",
                 "-U", self.db_config["user"],
                 "-d", self.db_config["database"]
             ]
 
+            # Iniciar progreso de restauración
             if self.config.show_progress:
                 restore_progress.start()
 
+            # Leer el archivo de backup
             with open(backup_path, 'r', encoding='utf-8') as f:
                 backup_content = f.read()
 
+            # Ejecutar restauración según el entorno
             if self.environment == Environment.DOCKER:
                 result = self.handler.execute_command(target, cmd, stdin_data=backup_content)
             elif self.environment == Environment.KUBERNETES:
@@ -457,6 +542,7 @@ class UnifiedBackupOrchestrator:
                 full_cmd = ['sh', '-c', f"export {' '.join(env_vars)} && {' '.join(cmd)}"]
                 result = self.handler.execute_command(target, full_cmd, container, stdin_data=backup_content)
 
+            # Simular progreso durante la restauración
             if self.config.show_progress:
                 restore_progress.simulate_work()
 
@@ -494,6 +580,7 @@ class UnifiedBackupOrchestrator:
             self._print_message('ERROR', error_msg)
             return False
 
+
 def display_backup_list(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
     """
     Muestra la lista de backups disponibles
@@ -506,6 +593,7 @@ def display_backup_list(orchestrator: UnifiedBackupOrchestrator, use_colors: boo
             print("No se encontraron archivos de backup")
         return 0
 
+    # Encabezado
     if use_colors:
         print(f"{Colors.CYAN}{Colors.BOLD}Archivos de backup en {orchestrator.backup_dir}:{Colors.RESET}")
         print(f"{Colors.CYAN}{'-' * 60}{Colors.RESET}")
@@ -522,6 +610,7 @@ def display_backup_list(orchestrator: UnifiedBackupOrchestrator, use_colors: boo
         else:
             print(f"{backup['name']:<30} {size_str:>10} {backup['modified']}")
     return 0
+
 
 def display_header(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
     """
@@ -548,6 +637,86 @@ def display_header(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
         print(f"Directorio de backup: {orchestrator.backup_dir}")
         print("-" * 50)
 
+
+def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBackupOrchestrator, use_colors: bool) -> int:
+    """
+    Maneja comandos relacionados con estrategias de backup y retención
+    """
+    backup_strategy = orchestrator.backup_strategy
+
+    # Mostrar resumen de backups
+    if config.backup_summary:
+        print_colored_message('INFO', 'Resumen de backups y políticas de retención:', use_colors)
+
+        # Obtener resumen de retención
+        summary = backup_strategy.get_retention_summary()
+
+        print(f"\n📊 POLÍTICAS DE RETENCIÓN")
+        print("-" * 40)
+        for category, count in summary['policies'].items():
+            current = summary['current_counts'].get(category, 0)
+            print(f"  {category.capitalize()}: {current}/{count} backups")
+
+        print(f"\n📈 ESTADÍSTICAS")
+        print("-" * 40)
+        print(f"  Total de backups: {summary['total_backups']}")
+        print(f"  Espacio utilizado: {summary['total_size_mb']} MB")
+
+        # Mostrar backups por tipo
+        backups_by_type = backup_strategy.list_backups_by_type()
+
+        print(f"\n📋 BACKUPS POR TIPO")
+        print("-" * 40)
+        for backup_type, backups in backups_by_type.items():
+            if backups:
+                print(f"\n{backup_type.upper()} ({len(backups)}):")
+                for backup in backups[:3]:  # Mostrar últimos 3
+                    timestamp = datetime.fromisoformat(backup['timestamp'])
+                    size_mb = backup.get('file_size', 0) / (1024 * 1024)
+                    print(f"  • {backup['name']} - {timestamp.strftime('%Y-%m-%d %H:%M')} ({size_mb:.1f} MB)")
+                if len(backups) > 3:
+                    print(f"  ... y {len(backups) - 3} más")
+
+        # Mostrar recomendación para próximo backup
+        recommendation = backup_strategy.get_next_backup_recommendation()
+        print(f"\n💡 PRÓXIMO BACKUP RECOMENDADO")
+        print("-" * 40)
+        print(f"  Tipo: {recommendation['type'].upper()}")
+        print(f"  Razón: {recommendation['reason']}")
+
+        return 0
+
+    # Aplicar políticas de retención
+    if config.apply_retention or config.retention_dry_run:
+        dry_run = config.retention_dry_run
+        action = "Simulando" if dry_run else "Aplicando"
+
+        print_colored_message('INFO', f'{action} políticas de retención...', use_colors)
+
+        deleted_counts = backup_strategy.apply_retention_policy(dry_run=dry_run)
+
+        total_deleted = sum(deleted_counts.values())
+
+        if total_deleted == 0:
+            print_colored_message('INFO', 'No hay backups que eliminar según las políticas actuales', use_colors)
+        else:
+            print(f"\n🗑️  BACKUPS {'A ELIMINAR' if dry_run else 'ELIMINADOS'}")
+            print("-" * 40)
+            for category, count in deleted_counts.items():
+                if count > 0:
+                    print(f"  {category.capitalize()}: {count} backups")
+            print(f"  Total: {total_deleted} backups")
+
+            if dry_run:
+                print_colored_message('INFO', 'Ejecutar sin --retention-dry-run para eliminar realmente', use_colors)
+            else:
+                print_colored_message('SUCCESS', f'{total_deleted} backups eliminados exitosamente', use_colors)
+
+        return 0
+
+    return 0
+
+
 def main():
     """
     Función principal con interfaz de línea de comandos unificada
@@ -561,23 +730,32 @@ def main():
         print(f"Error en argumentos: {e}")
         return 1
 
+    # Determinar si se deben usar colores
     use_colors = should_use_colors(config.no_color)
     if not use_colors:
         Colors.disable()
 
+    # Configurar nivel de logging basado en flag verbose
     if config.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
     try:
         orchestrator = UnifiedBackupOrchestrator(config)
 
+        # Manejar comandos de estrategias de backup
+        if (config.backup_summary or config.apply_retention or config.retention_dry_run):
+            return handle_backup_strategy_commands(config, orchestrator, use_colors)
+
+        # Manejar comando de lista
         if config.list:
             return display_backup_list(orchestrator, use_colors)
 
+        # Manejar comando de restauración
         if config.restore:
             if config.show_progress:
                 display_header(orchestrator, use_colors)
 
+            # Restaurar desde archivo específico o selección interactiva
             restore_path = None
             if config.restore_file:
                 restore_path = Path(config.restore_file)
@@ -596,6 +774,7 @@ def main():
                     print_colored_message('FAILED', 'La operación de restauración falló', use_colors)
                 return 1
 
+        # Crear backup
         if config.show_progress:
             display_header(orchestrator, use_colors)
 
@@ -619,6 +798,7 @@ def main():
     except Exception as e:
         print_colored_message('ERROR', f'Error inesperado: {e}', use_colors)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
