@@ -41,11 +41,11 @@ k8s/
    eval $(minikube docker-env)
 
    # Construir imagen localmente de la bd
-   docker build -f k8s/postgres/Dockerfile-postgres -t custom-postgres:latest .
+   docker build -f k8s/postgres/Dockerfile -t custom-postgres:latest .
 
    # Construimos la imagen localmente del backend en pthon
 
-   docker build -f Dockerfile-backend -t miapp:latest .
+   docker build -f Dockerfile -t miapp:latest .
 
    # Verificar imagenes
    docker images | grep -E "custom-postgres|miapp"
