@@ -3,11 +3,13 @@ Configuración compartida para todos los tests del proyecto.
 Incluye fixtures y configuraciones globales de pytest.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
+
 from backup_orchestrator import BackupOrchestrator
 
 
@@ -27,7 +29,7 @@ def mock_docker_container():
     """
     Fixture que simula un contenedor Docker disponible.
     """
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         # Simular que docker inspect retorna éxito (contenedor existe)
         mock_run.return_value = Mock(returncode=0)
         yield mock_run
@@ -38,7 +40,7 @@ def mock_docker_container_not_found():
     """
     Fixture que simula un contenedor Docker no encontrado.
     """
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         # Simular que docker inspect falla (contenedor no existe)
         mock_run.return_value = Mock(returncode=1)
         yield mock_run
@@ -53,5 +55,5 @@ def orchestrator_instance(temp_backup_dir):
         container_name="test_db",
         backup_dir=str(temp_backup_dir),
         show_progress=False,  # Deshabilitar progreso en tests
-        use_colors=False      # Deshabilitar colores en tests
-    ) 
+        use_colors=False,  # Deshabilitar colores en tests
+    )

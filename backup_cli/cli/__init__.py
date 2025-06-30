@@ -1,3 +1,3 @@
-from .parser import create_cli_parser, CLIConfig
+from .parser import CLIConfig, create_cli_parser
 
-__all__ = ['create_cli_parser', 'CLIConfig']
+__all__ = ["create_cli_parser", "CLIConfig"]

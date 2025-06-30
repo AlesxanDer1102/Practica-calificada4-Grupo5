@@ -1,3 +1,3 @@
-from .detector import EnvironmentDetector, Environment
+from .detector import Environment, EnvironmentDetector
 
-__all__ = ['EnvironmentDetector', 'Environment']
+__all__ = ["EnvironmentDetector", "Environment"]

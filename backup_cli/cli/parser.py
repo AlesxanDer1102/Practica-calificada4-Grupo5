@@ -12,7 +12,7 @@ def create_cli_parser():
     Crea el parser de argumentos de línea de comandos con soporte para K8s
     """
     parser = argparse.ArgumentParser(
-        description='Orquestador de Backup de PostgreSQL para Docker y Kubernetes',
+        description="Orquestador de Backup de PostgreSQL para Docker y Kubernetes",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos de uso:
@@ -37,118 +37,118 @@ Opciones generales:
   %(prog)s --force                            # Sobrescribir backup existente
   %(prog)s --no-color                         # Deshabilitar salida coloreada
   %(prog)s --auto-detect                      # Detectar entorno automáticamente
-        """
+        """,
     )
 
     # Argumentos generales
     parser.add_argument(
-        '--name', '-n',
+        "--name",
+        "-n",
         type=str,
-        help='Nombre personalizado para el archivo de backup (sin extensión .sql)'
+        help="Nombre personalizado para el archivo de backup (sin extensión .sql)",
     )
 
     parser.add_argument(
-        '--dir', '-d',
+        "--dir",
+        "-d",
         type=str,
-        default='backups',
-        help='Ruta del directorio de backups (predeterminado: backups)'
+        default="backups",
+        help="Ruta del directorio de backups (predeterminado: backups)",
     )
 
     parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Habilitar salida detallada'
+        "--verbose", "-v", action="store_true", help="Habilitar salida detallada"
     )
 
     parser.add_argument(
-        '--quiet', '-q',
-        action='store_true',
-        help='Deshabilitar indicadores de progreso'
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Deshabilitar indicadores de progreso",
     )
 
     parser.add_argument(
-        '--force', '-f',
-        action='store_true',
-        help='Sobrescribir archivos de backup existentes'
+        "--force",
+        "-f",
+        action="store_true",
+        help="Sobrescribir archivos de backup existentes",
     )
 
     parser.add_argument(
-        '--list', '-l',
-        action='store_true',
-        help='Listar archivos de backup existentes y salir'
+        "--list",
+        "-l",
+        action="store_true",
+        help="Listar archivos de backup existentes y salir",
     )
 
     parser.add_argument(
-        '--restore', '-r',
-        action='store_true',
-        help='Restaurar base de datos desde un backup seleccionado'
+        "--restore",
+        "-r",
+        action="store_true",
+        help="Restaurar base de datos desde un backup seleccionado",
     )
 
     parser.add_argument(
-        '--restore-file',
+        "--restore-file",
         type=str,
-        help='Ruta específica del archivo de backup a restaurar (omite selección interactiva)'
+        help="Ruta específica del archivo de backup a restaurar (omite selección interactiva)",
     )
 
     parser.add_argument(
-        '--no-color',
-        action='store_true',
-        help='Deshabilitar salida coloreada'
+        "--no-color", action="store_true", help="Deshabilitar salida coloreada"
     )
-
-    # Argumentos específicos de Docker
-    docker_group = parser.add_argument_group('Opciones de Docker')
+    
+    docker_group = parser.add_argument_group("Opciones de Docker")
     docker_group.add_argument(
-        '--container', '-c',
+        "--container",
+        "-c",
         type=str,
-        help='Nombre del contenedor Docker (para entorno Docker)'
+        help="Nombre del contenedor Docker (para entorno Docker)",
     )
 
-    # Argumentos específicos de Kubernetes
-    k8s_group = parser.add_argument_group('Opciones de Kubernetes')
-    k8s_group.add_argument(
-        '--pod', '-p',
-        type=str,
-        help='Nombre del pod (para entorno Kubernetes)'
-    )
 
+    k8s_group = parser.add_argument_group("Opciones de Kubernetes")
     k8s_group.add_argument(
-        '--namespace', '-ns',
-        type=str,
-        default='default',
-        help='Namespace de Kubernetes (predeterminado: default)'
+        "--pod", "-p", type=str, help="Nombre del pod (para entorno Kubernetes)"
     )
 
     k8s_group.add_argument(
-        '--labels',
+        "--namespace",
+        "-ns",
         type=str,
-        help='Selector de labels para encontrar pods (formato: key1=value1,key2=value2)'
+        default="default",
+        help="Namespace de Kubernetes (predeterminado: default)",
     )
 
     k8s_group.add_argument(
-        '--k8s-container',
+        "--labels",
         type=str,
-        help='Nombre del contenedor específico dentro del pod'
+        help="Selector de labels para encontrar pods (formato: key1=value1,key2=value2)",
     )
 
-    # Opciones de entorno
-    env_group = parser.add_argument_group('Detección de entorno')
+    k8s_group.add_argument(
+        "--k8s-container",
+        type=str,
+        help="Nombre del contenedor específico dentro del pod",
+    )
+
+    env_group = parser.add_argument_group("Detección de entorno")
     env_group.add_argument(
-        '--auto-detect',
-        action='store_true',
-        help='Detectar automáticamente el entorno (Docker o Kubernetes)'
-    )
-
-    env_group.add_argument(
-        '--force-docker',
-        action='store_true',
-        help='Forzar uso de Docker (ignora detección automática)'
+        "--auto-detect",
+        action="store_true",
+        help="Detectar automáticamente el entorno (Docker o Kubernetes)",
     )
 
     env_group.add_argument(
-        '--force-kubernetes',
-        action='store_true',
-        help='Forzar uso de Kubernetes (ignora detección automática)'
+        "--force-docker",
+        action="store_true",
+        help="Forzar uso de Docker (ignora detección automática)",
+    )
+
+    env_group.add_argument(
+        "--force-kubernetes",
+        action="store_true",
+        help="Forzar uso de Kubernetes (ignora detección automática)",
     )
 
     # Opciones de estrategias de backup
@@ -263,7 +263,6 @@ Opciones generales:
 
     return parser
 
-
 def parse_labels(labels_str: str) -> Dict[str, str]:
     """
     Parsea una cadena de labels en formato key1=value1,key2=value2
@@ -272,9 +271,9 @@ def parse_labels(labels_str: str) -> Dict[str, str]:
         return {}
 
     labels = {}
-    for label_pair in labels_str.split(','):
-        if '=' in label_pair:
-            key, value = label_pair.split('=', 1)
+    for label_pair in labels_str.split(","):
+        if "=" in label_pair:
+            key, value = label_pair.split("=", 1)
             labels[key.strip()] = value.strip()
 
     return labels
@@ -345,7 +344,9 @@ class CLIConfig:
         """
         # No se pueden forzar ambos entornos
         if self.force_docker and self.force_kubernetes:
-            raise ValueError("No se pueden especificar --force-docker y --force-kubernetes al mismo tiempo")
+            raise ValueError(
+                "No se pueden especificar --force-docker y --force-kubernetes al mismo tiempo"
+            )
 
         # Si se especifica un pod, debería ser Kubernetes
         if self.pod and self.force_docker:
@@ -353,7 +354,9 @@ class CLIConfig:
 
         # Si se especifica un contenedor sin pod, debería ser Docker
         if self.container and not self.pod and self.force_kubernetes:
-            raise ValueError("--container sin --pod no es compatible con --force-kubernetes")
+            raise ValueError(
+                "--container sin --pod no es compatible con --force-kubernetes"
+            )
 
         # Validación de programación
         if self.schedule and self.schedule_custom:
