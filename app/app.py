@@ -2,13 +2,14 @@ from datetime import datetime
 from src.core.database import SessionLocal
 from src.operations import *
 
+
 def mostrar_menu():
     """
     Muestra el menú principal de opciones
     """
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("         SISTEMA DE GESTIÓN DE PEDIDOS")
-    print("="*50)
+    print("=" * 50)
     print("1. Ver todos los pedidos")
     print("2. Crear usuario")
     print("3. Crear producto")
@@ -18,7 +19,8 @@ def mostrar_menu():
     print("7. Buscar pedido por ID")
     print("8. Eliminar base de datos")
     print("9. Salir")
-    print("="*50)
+    print("=" * 50)
+
 
 def validar_entero(mensaje: str) -> int:
     """
@@ -30,6 +32,7 @@ def validar_entero(mensaje: str) -> int:
         except ValueError:
             print("Por favor, ingrese un número válido.")
 
+
 def validar_float(mensaje: str) -> float:
     """
     Obtiene una entrada flotante del usuario con validación
@@ -39,6 +42,7 @@ def validar_float(mensaje: str) -> float:
             return float(input(mensaje))
         except ValueError:
             print("Por favor, ingrese un número decimal válido.")
+
 
 def manejar_ver_pedidos(db: Session):
     """
@@ -62,6 +66,7 @@ def manejar_ver_pedidos(db: Session):
         print(f"Fecha: {pedido.fecha_pedido}")
         print("-" * 40)
 
+
 def manejar_crear_usuario(db: Session):
     """
     Maneja la creación de un nuevo usuario
@@ -79,6 +84,7 @@ def manejar_crear_usuario(db: Session):
         print(f"Usuario creado exitosamente con ID: {usuario_id}")
     else:
         print("Error al crear el usuario.")
+
 
 def manejar_crear_producto(db: Session):
     """
@@ -102,6 +108,7 @@ def manejar_crear_producto(db: Session):
         print(f"Producto creado exitosamente con ID: {producto_id}")
     else:
         print("Error al crear el producto.")
+
 
 def manejar_crear_pedido(db: Session):
     """
@@ -138,6 +145,7 @@ def manejar_crear_pedido(db: Session):
     else:
         print("Error al crear el pedido.")
 
+
 def manejar_buscar_usuario(db: Session):
     """
     Maneja la búsqueda de un usuario por ID
@@ -153,6 +161,7 @@ def manejar_buscar_usuario(db: Session):
         print(f"Apellido: {usuario.apellido}")
     else:
         print(f"No se encontró un usuario con ID: {usuario_id}")
+
 
 def manejar_buscar_producto(db: Session):
     """
@@ -170,6 +179,7 @@ def manejar_buscar_producto(db: Session):
         print(f"Precio: ${producto.precio}")
     else:
         print(f"No se encontró un producto con ID: {producto_id}")
+
 
 def manejar_buscar_pedido(db: Session):
     """
@@ -192,18 +202,24 @@ def manejar_buscar_pedido(db: Session):
     else:
         print(f"No se encontró un pedido con ID: {pedido_id}")
 
+
 def manejar_eliminar_base_datos(db: Session):
     """
     Maneja la eliminación de la base de datos
     """
     print("\n--- ELIMINAR BASE DE DATOS ---")
-    confirmacion = input("¿Está seguro que desea eliminar TODA la base de datos? (si/no): ").lower().strip()
+    confirmacion = (
+        input("¿Está seguro que desea eliminar TODA la base de datos? (si/no): ")
+        .lower()
+        .strip()
+    )
 
-    if confirmacion in ['si', 'sí', 's', 'yes', 'y']:
+    if confirmacion in ["si", "sí", "s", "yes", "y"]:
         eliminar_base_de_datos(db)
         print("¡ADVERTENCIA! La base de datos ha sido eliminada.")
     else:
         print("Operación cancelada.")
+
 
 def main():
     print("¡Bienvenido al Sistema de Gestión de Pedidos!")
@@ -248,6 +264,7 @@ def main():
         finally:
             if db is not None:
                 db.close()
+
 
 if __name__ == "__main__":
     main()

@@ -8,6 +8,7 @@ from src.models.usuario import Usuario
 from src.models.producto import Producto
 from src.models.pedido import Pedido
 
+
 def obtener_info_completa(db: Session) -> List[Pedido]:
     """
     Obtiene información enlazada sobre los productos, usuarios y pedidos disponibles
@@ -25,15 +26,13 @@ def obtener_info_completa(db: Session) -> List[Pedido]:
         db.rollback()
         return []
 
+
 def crear_usuario(db: Session, nombre: str, apellido: str) -> int:
     """
     Crea un nuevo usuario
     """
     try:
-        nuevo_usuario = Usuario(
-            nombre=nombre,
-            apellido=apellido
-        )
+        nuevo_usuario = Usuario(nombre=nombre, apellido=apellido)
         db.add(nuevo_usuario)
         db.commit()
         db.refresh(nuevo_usuario)
@@ -43,7 +42,10 @@ def crear_usuario(db: Session, nombre: str, apellido: str) -> int:
         db.rollback()
         return -1
 
-def crear_producto(db: Session, nombre_producto: str, manufacturador: str, precio: float) -> int:
+
+def crear_producto(
+    db: Session, nombre_producto: str, manufacturador: str, precio: float
+) -> int:
     """
     Crea un nuevo producto
     """
@@ -51,7 +53,7 @@ def crear_producto(db: Session, nombre_producto: str, manufacturador: str, preci
         nuevo_producto = Producto(
             nombre_producto=nombre_producto,
             manufacturador=manufacturador,
-            precio=precio
+            precio=precio,
         )
         db.add(nuevo_producto)
         db.commit()
@@ -62,15 +64,14 @@ def crear_producto(db: Session, nombre_producto: str, manufacturador: str, preci
         db.rollback()
         return -1
 
+
 def crear_pedido(db: Session, usuario_id: int, producto_id: int, cantidad: int) -> int:
     """
     Crea un nuevo pedido
     """
     try:
         nuevo_pedido = Pedido(
-            usuario_id=usuario_id,
-            producto_id=producto_id,
-            cantidad=cantidad
+            usuario_id=usuario_id, producto_id=producto_id, cantidad=cantidad
         )
         db.add(nuevo_pedido)
         db.commit()
@@ -80,6 +81,7 @@ def crear_pedido(db: Session, usuario_id: int, producto_id: int, cantidad: int) 
         print(f"Error en la base de datos: {e}")
         db.rollback()
         return -1
+
 
 def obtener_usuario(db: Session, usuario_id: int) -> Optional[Usuario]:
     """
@@ -92,16 +94,20 @@ def obtener_usuario(db: Session, usuario_id: int) -> Optional[Usuario]:
         print(f"Error al obtener usuario: {e}")
         return None
 
+
 def obtener_producto(db: Session, producto_id: int) -> Optional[Producto]:
     """
     Obtiene un producto por su ID
     """
     try:
-        producto = db.query(Producto).filter(Producto.producto_id == producto_id).first()
+        producto = (
+            db.query(Producto).filter(Producto.producto_id == producto_id).first()
+        )
         return producto
     except Exception as e:
         print(f"Error al obtener producto: {e}")
         return None
+
 
 def obtener_pedido(db: Session, pedido_id: int) -> Optional[Pedido]:
     """
@@ -119,6 +125,7 @@ def obtener_pedido(db: Session, pedido_id: int) -> Optional[Pedido]:
     except Exception as e:
         print(f"Error al obtener pedido: {e}")
         return None
+
 
 def eliminar_base_de_datos(db: Session) -> None:
     """

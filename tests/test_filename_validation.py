@@ -24,9 +24,9 @@ class TestBackupNameValidator:
             "mi_backup_2024",
             "proyecto-final",
             "test_123",
-            "backup.daily"
+            "backup.daily",
         ]
-        
+
         for name in valid_names:
             is_valid, message = BackupNameValidator.validate_backup_name(name)
             assert is_valid is True, f"Nombre '{name}' debería ser válido: {message}"
@@ -52,9 +52,9 @@ class TestBackupNameValidator:
             "backup\\test",
             "backup|test",
             "backup?test",
-            "backup*test"
+            "backup*test",
         ]
-        
+
         for name in invalid_names:
             is_valid, message = BackupNameValidator.validate_backup_name(name)
             assert is_valid is False, f"Nombre '{name}' debería ser inválido"
@@ -69,9 +69,9 @@ class TestBackupNameValidator:
         assert is_valid is False
         assert "muy largo" in message
 
-    @pytest.mark.parametrize("reserved_name", [
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "LPT1", "LPT9"
-    ])
+    @pytest.mark.parametrize(
+        "reserved_name", ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "LPT1", "LPT9"]
+    )
     def test_validate_backup_name_reserved_names(self, reserved_name):
         """
         Test parametrizado que verifica el rechazo de nombres reservados del sistema.
@@ -86,13 +86,15 @@ class TestBackupNameValidator:
         """
         with tempfile.TemporaryDirectory() as temp_dir:
             backup_dir = Path(temp_dir)
-            
+
             # Mock datetime para timestamp predecible
-            with patch('backup_cli.utils.validator.datetime') as mock_datetime:
+            with patch("backup_cli.utils.validator.datetime") as mock_datetime:
                 mock_datetime.now.return_value.strftime.return_value = "20240115_143000"
-                
-                filename, name_modified = BackupNameValidator.resolve_backup_filename(backup_dir)
-                
+
+                filename, name_modified = BackupNameValidator.resolve_backup_filename(
+                    backup_dir
+                )
+
                 assert filename == "backup_20240115_143000.sql"
                 assert name_modified is False
 
@@ -103,11 +105,11 @@ class TestBackupNameValidator:
         with tempfile.TemporaryDirectory() as temp_dir:
             backup_dir = Path(temp_dir)
             custom_name = "mi_backup_test"
-            
+
             filename, name_modified = BackupNameValidator.resolve_backup_filename(
                 backup_dir, custom_name
             )
-            
+
             assert filename == "mi_backup_test.sql"
             assert name_modified is False
 
@@ -118,19 +120,19 @@ class TestBackupNameValidator:
         with tempfile.TemporaryDirectory() as temp_dir:
             backup_dir = Path(temp_dir)
             custom_name = "backup_conflicto"
-            
+
             # Crear archivo existente
             existing_file = backup_dir / f"{custom_name}.sql"
             existing_file.touch()
-            
+
             # Mock datetime para timestamp predecible
-            with patch('backup_cli.utils.validator.datetime') as mock_datetime:
+            with patch("backup_cli.utils.validator.datetime") as mock_datetime:
                 mock_datetime.now.return_value.strftime.return_value = "20240115_143000"
-                
+
                 filename, name_modified = BackupNameValidator.resolve_backup_filename(
                     backup_dir, custom_name, force_overwrite=False
                 )
-                
+
                 assert filename == "backup_conflicto_20240115_143000.sql"
                 assert name_modified is True
 
@@ -141,15 +143,15 @@ class TestBackupNameValidator:
         with tempfile.TemporaryDirectory() as temp_dir:
             backup_dir = Path(temp_dir)
             custom_name = "backup_sobrescribir"
-            
+
             # Crear archivo existente
             existing_file = backup_dir / f"{custom_name}.sql"
             existing_file.touch()
-            
+
             filename, name_modified = BackupNameValidator.resolve_backup_filename(
                 backup_dir, custom_name, force_overwrite=True
             )
-            
+
             assert filename == "backup_sobrescribir.sql"
             assert name_modified is False
 
@@ -160,10 +162,10 @@ class TestBackupNameValidator:
         with tempfile.TemporaryDirectory() as temp_dir:
             backup_dir = Path(temp_dir)
             invalid_name = "backup<invalid>"
-            
+
             with pytest.raises(ValueError) as exc_info:
                 BackupNameValidator.resolve_backup_filename(backup_dir, invalid_name)
-            
+
             assert "Nombre de backup inválido" in str(exc_info.value)
 
 
@@ -172,16 +174,19 @@ class TestFormatFileSize:
     Clase de tests para la función de formateo de tamaños de archivo.
     """
 
-    @pytest.mark.parametrize("size_bytes,expected", [
-        (0, "0.0 B"),
-        (512, "512.0 B"),
-        (1023, "1023.0 B"),
-        (1024, "1.0 KB"),
-        (1536, "1.5 KB"),
-        (1048576, "1.0 MB"),
-        (1073741824, "1.0 GB"),
-        (1099511627776, "1.0 TB"),
-    ])
+    @pytest.mark.parametrize(
+        "size_bytes,expected",
+        [
+            (0, "0.0 B"),
+            (512, "512.0 B"),
+            (1023, "1023.0 B"),
+            (1024, "1.0 KB"),
+            (1536, "1.5 KB"),
+            (1048576, "1.0 MB"),
+            (1073741824, "1.0 GB"),
+            (1099511627776, "1.0 TB"),
+        ],
+    )
     def test_format_file_size_various_sizes(self, size_bytes, expected):
         """
         Test parametrizado para verificar el formateo correcto de diferentes tamaños.
@@ -193,7 +198,7 @@ class TestFormatFileSize:
         """
         Test que verifica el manejo de números muy grandes.
         """
-        very_large = 1024 ** 5  # Más de 1 TB
+        very_large = 1024**5  # Más de 1 TB
         result = format_file_size(very_large)
         assert result.endswith(" TB")
-        assert "1024.0" in result 
+        assert "1024.0" in result

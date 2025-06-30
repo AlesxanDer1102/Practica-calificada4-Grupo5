@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 
+
 class KubernetesHandler:
     """
     Maneja operaciones específicas de Kubernetes para backups de PostgreSQL
@@ -24,12 +25,7 @@ class KubernetesHandler:
                 label_selector = ",".join([f"{k}={v}" for k, v in labels.items()])
                 cmd.extend(["-l", label_selector])
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
                 self.logger.error(f"Error al obtener pods: {result.stderr}")
@@ -38,16 +34,20 @@ class KubernetesHandler:
             data = json.loads(result.stdout)
             pods = []
 
-            for item in data.get('items', []):
+            for item in data.get("items", []):
 
                 if self._is_postgres_pod(item):
-                    pods.append({
-                        'name': item['metadata']['name'],
-                        'namespace': item['metadata']['namespace'],
-                        'status': item['status']['phase'],
-                        'labels': item['metadata'].get('labels', {}),
-                        'containers': [c['name'] for c in item['spec']['containers']]
-                    })
+                    pods.append(
+                        {
+                            "name": item["metadata"]["name"],
+                            "namespace": item["metadata"]["namespace"],
+                            "status": item["status"]["phase"],
+                            "labels": item["metadata"].get("labels", {}),
+                            "containers": [
+                                c["name"] for c in item["spec"]["containers"]
+                            ],
+                        }
+                    )
 
             return pods
 
@@ -61,23 +61,23 @@ class KubernetesHandler:
         Adaptado para la configuración específica del proyecto
         """
 
-        name = pod_data['metadata']['name'].lower()
-        if 'postgres' in name or 'postgresql' in name:
+        name = pod_data["metadata"]["name"].lower()
+        if "postgres" in name or "postgresql" in name:
             return True
 
-        labels = pod_data['metadata'].get('labels', {})
+        labels = pod_data["metadata"].get("labels", {})
 
-        if labels.get('app') == 'postgres':
+        if labels.get("app") == "postgres":
             return True
 
         for key, value in labels.items():
-            if 'postgres' in key.lower() or 'postgres' in str(value).lower():
+            if "postgres" in key.lower() or "postgres" in str(value).lower():
                 return True
 
-        containers = pod_data['spec'].get('containers', [])
+        containers = pod_data["spec"].get("containers", [])
         for container in containers:
-            image = container.get('image', '').lower()
-            if 'postgres' in image or 'custom-postgres' in image:
+            image = container.get("image", "").lower()
+            if "postgres" in image or "custom-postgres" in image:
                 return True
 
         return False
@@ -93,7 +93,7 @@ class KubernetesHandler:
             return None
 
         if len(pods) == 1:
-            pod_name = pods[0]['name']
+            pod_name = pods[0]["name"]
             print(f"Pod de PostgreSQL detectado automáticamente: {pod_name}")
             return pod_name
 
@@ -101,24 +101,28 @@ class KubernetesHandler:
         print("-" * 60)
 
         for i, pod in enumerate(pods, 1):
-            status_color = "🟢" if pod['status'] == 'Running' else "🔴"
+            status_color = "🟢" if pod["status"] == "Running" else "🔴"
             print(f"  {i}. {pod['name']} [{pod['namespace']}] {status_color}")
             print(f"     Estado: {pod['status']}")
             print(f"     Contenedores: {', '.join(pod['containers'])}")
-            if pod['labels']:
-                print(f"     Labels: {', '.join([f'{k}={v}' for k, v in pod['labels'].items()])}")
+            if pod["labels"]:
+                print(
+                    f"     Labels: {', '.join([f'{k}={v}' for k, v in pod['labels'].items()])}"
+                )
             print()
 
         while True:
             try:
-                selection = input("Seleccione el número del pod (0 para cancelar): ").strip()
+                selection = input(
+                    "Seleccione el número del pod (0 para cancelar): "
+                ).strip()
 
-                if selection == '0':
+                if selection == "0":
                     return None
 
                 index = int(selection) - 1
                 if 0 <= index < len(pods):
-                    return pods[index]['name']
+                    return pods[index]["name"]
                 else:
                     print("Por favor, ingrese un número válido.")
 
@@ -132,26 +136,30 @@ class KubernetesHandler:
         Verifica si un pod está ejecutándose y listo
         """
         try:
-            cmd = ["kubectl", "get", "pod", pod_name, "-n", self.namespace, "-o", "json"]
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
+            cmd = [
+                "kubectl",
+                "get",
+                "pod",
+                pod_name,
+                "-n",
+                self.namespace,
+                "-o",
+                "json",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
 
             if result.returncode != 0:
                 return False
 
             data = json.loads(result.stdout)
-            status = data.get('status', {})
+            status = data.get("status", {})
 
-            if status.get('phase') != 'Running':
+            if status.get("phase") != "Running":
                 return False
 
-            container_statuses = status.get('containerStatuses', [])
+            container_statuses = status.get("containerStatuses", [])
             for container_status in container_statuses:
-                if not container_status.get('ready', False):
+                if not container_status.get("ready", False):
                     return False
 
             return True
@@ -160,8 +168,13 @@ class KubernetesHandler:
             self.logger.error(f"Error al verificar estado del pod {pod_name}: {e}")
             return False
 
-    def execute_command(self, pod_name: str, command: List[str],
-                       container: str = None, stdin_data: str = None) -> subprocess.CompletedProcess:
+    def execute_command(
+        self,
+        pod_name: str,
+        command: List[str],
+        container: str = None,
+        stdin_data: str = None,
+    ) -> subprocess.CompletedProcess:
         """
         Ejecuta un comando en un pod usando kubectl exec
         """
@@ -175,14 +188,10 @@ class KubernetesHandler:
 
         cmd.extend([pod_name, "--"] + command)
 
-        kwargs = {
-            'capture_output': True,
-            'text': True,
-            'timeout': 300
-        }
+        kwargs = {"capture_output": True, "text": True, "timeout": 300}
 
         if stdin_data:
-            kwargs['input'] = stdin_data
+            kwargs["input"] = stdin_data
 
         return subprocess.run(cmd, **kwargs)
 
@@ -192,32 +201,36 @@ class KubernetesHandler:
         Adaptado para la configuración específica del proyecto
         """
         try:
-            cmd = ["kubectl", "get", "pod", pod_name, "-n", self.namespace, "-o", "json"]
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
+            cmd = [
+                "kubectl",
+                "get",
+                "pod",
+                pod_name,
+                "-n",
+                self.namespace,
+                "-o",
+                "json",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
 
             if result.returncode != 0:
                 return None
 
             data = json.loads(result.stdout)
-            containers = data['spec'].get('containers', [])
+            containers = data["spec"].get("containers", [])
 
             for container in containers:
-                name = container.get('name', '').lower()
-                image = container.get('image', '').lower()
+                name = container.get("name", "").lower()
+                image = container.get("image", "").lower()
 
-                if name == 'postgres':  # Del StatefulSet
-                    return container['name']
+                if name == "postgres":  # Del StatefulSet
+                    return container["name"]
 
-                if 'custom-postgres' in image or 'postgres' in image:
-                    return container['name']
+                if "custom-postgres" in image or "postgres" in image:
+                    return container["name"]
 
             if containers:
-                return containers[0]['name']
+                return containers[0]["name"]
 
             return None
 
@@ -225,8 +238,9 @@ class KubernetesHandler:
             self.logger.error(f"Error al obtener contenedor PostgreSQL: {e}")
             return None
 
-    def copy_file_to_pod(self, local_path: Path, pod_name: str,
-                        remote_path: str, container: str = None) -> bool:
+    def copy_file_to_pod(
+        self, local_path: Path, pod_name: str, remote_path: str, container: str = None
+    ) -> bool:
         """
         Copia un archivo local a un pod
         """
@@ -238,12 +252,7 @@ class KubernetesHandler:
 
             cmd.extend([str(local_path), f"{pod_name}:{remote_path}"])
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
             return result.returncode == 0
 
@@ -251,8 +260,9 @@ class KubernetesHandler:
             self.logger.error(f"Error al copiar archivo al pod: {e}")
             return False
 
-    def copy_file_from_pod(self, pod_name: str, remote_path: str,
-                          local_path: Path, container: str = None) -> bool:
+    def copy_file_from_pod(
+        self, pod_name: str, remote_path: str, local_path: Path, container: str = None
+    ) -> bool:
         """
         Copia un archivo desde un pod al sistema local
         """
@@ -264,12 +274,7 @@ class KubernetesHandler:
 
             cmd.extend([f"{pod_name}:{remote_path}", str(local_path)])
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
             return result.returncode == 0
 
