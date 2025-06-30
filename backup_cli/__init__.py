@@ -1,3 +1,4 @@
-from backup_orchestrator import UnifiedBackupOrchestrator
+# backup_cli package
+# Contains CLI utilities and handlers for backup operations
 
-__all__ = ["UnifiedBackupOrchestrator"]
+__version__ = "1.0.0"

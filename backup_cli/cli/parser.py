@@ -97,7 +97,7 @@ Opciones generales:
     parser.add_argument(
         "--no-color", action="store_true", help="Deshabilitar salida coloreada"
     )
-    
+
     docker_group = parser.add_argument_group("Opciones de Docker")
     docker_group.add_argument(
         "--container",
@@ -105,7 +105,6 @@ Opciones generales:
         type=str,
         help="Nombre del contenedor Docker (para entorno Docker)",
     )
-
 
     k8s_group = parser.add_argument_group("Opciones de Kubernetes")
     k8s_group.add_argument(
@@ -152,116 +151,117 @@ Opciones generales:
     )
 
     # Opciones de estrategias de backup
-    backup_group = parser.add_argument_group('Estrategias de backup y retención')
+    backup_group = parser.add_argument_group("Estrategias de backup y retención")
     backup_group.add_argument(
-        '--backup-type',
-        choices=['auto', 'full', 'incremental'],
-        default='auto',
-        help='Tipo de backup: auto (decide automáticamente), full (completo), incremental'
+        "--backup-type",
+        choices=["auto", "full", "incremental"],
+        default="auto",
+        help="Tipo de backup: auto (decide automáticamente), full (completo), incremental",
     )
 
     backup_group.add_argument(
-        '--force-full',
-        action='store_true',
-        help='Forzar backup completo ignorando la estrategia automática'
+        "--force-full",
+        action="store_true",
+        help="Forzar backup completo ignorando la estrategia automática",
     )
 
     backup_group.add_argument(
-        '--retention-daily',
+        "--retention-daily",
         type=int,
-        help='Número de backups diarios a mantener (predeterminado: 7)'
+        help="Número de backups diarios a mantener (predeterminado: 7)",
     )
 
     backup_group.add_argument(
-        '--retention-weekly',
+        "--retention-weekly",
         type=int,
-        help='Número de backups semanales a mantener (predeterminado: 4)'
+        help="Número de backups semanales a mantener (predeterminado: 4)",
     )
 
     backup_group.add_argument(
-        '--retention-monthly',
+        "--retention-monthly",
         type=int,
-        help='Número de backups mensuales a mantener (predeterminado: 12)'
+        help="Número de backups mensuales a mantener (predeterminado: 12)",
     )
 
     backup_group.add_argument(
-        '--retention-full',
+        "--retention-full",
         type=int,
-        help='Número de backups completos a mantener (predeterminado: 3)'
+        help="Número de backups completos a mantener (predeterminado: 3)",
     )
 
     backup_group.add_argument(
-        '--apply-retention',
-        action='store_true',
-        help='Aplicar políticas de retención eliminando backups antiguos'
+        "--apply-retention",
+        action="store_true",
+        help="Aplicar políticas de retención eliminando backups antiguos",
     )
 
     backup_group.add_argument(
-        '--retention-dry-run',
-        action='store_true',
-        help='Mostrar qué backups se eliminarían sin eliminarlos realmente'
+        "--retention-dry-run",
+        action="store_true",
+        help="Mostrar qué backups se eliminarían sin eliminarlos realmente",
     )
 
     backup_group.add_argument(
-        '--backup-summary',
-        action='store_true',
-        help='Mostrar resumen de backups y políticas de retención'
+        "--backup-summary",
+        action="store_true",
+        help="Mostrar resumen de backups y políticas de retención",
     )
 
     # Opciones de programación automática
-    schedule_group = parser.add_argument_group('Programación de backups automáticos')
+    schedule_group = parser.add_argument_group("Programación de backups automáticos")
     schedule_group.add_argument(
-        '--schedule',
+        "--schedule",
         type=str,
-        choices=['hourly', 'daily', 'weekly', 'monthly', 'workdays'],
-        help='Configurar backup automático con frecuencia predefinida'
+        choices=["hourly", "daily", "weekly", "monthly", "workdays"],
+        help="Configurar backup automático con frecuencia predefinida",
     )
 
     schedule_group.add_argument(
-        '--schedule-custom',
+        "--schedule-custom",
         type=str,
-        help='Configurar backup automático con cron schedule personalizado (formato: "0 2 * * *")'
+        help='Configurar backup automático con cron schedule personalizado (formato: "0 2 * * *")',
     )
 
     schedule_group.add_argument(
-        '--schedule-prefix',
+        "--schedule-prefix",
         type=str,
-        default='auto',
-        help='Prefijo para nombres de backups automáticos (predeterminado: auto)'
+        default="auto",
+        help="Prefijo para nombres de backups automáticos (predeterminado: auto)",
     )
 
     schedule_group.add_argument(
-        '--retention-days',
+        "--retention-days",
         type=int,
         default=7,
-        help='Días de retención para backups automáticos (predeterminado: 7)'
+        help="Días de retención para backups automáticos (predeterminado: 7)",
     )
 
     schedule_group.add_argument(
-        '--notification-email',
+        "--notification-email",
         type=str,
-        help='Email para notificaciones de backups automáticos'
+        help="Email para notificaciones de backups automáticos",
     )
 
     schedule_group.add_argument(
-        '--list-schedules',
-        action='store_true',
-        help='Listar programaciones de backup existentes'
+        "--list-schedules",
+        action="store_true",
+        help="Listar programaciones de backup existentes",
     )
 
     schedule_group.add_argument(
-        '--remove-schedule',
+        "--remove-schedule",
         type=str,
-        help='Eliminar programación de backup (usar nombre o patrón)'
+        help="Eliminar programación de backup (usar nombre o patrón)",
     )
 
     schedule_group.add_argument(
-        '--test-notifications',
-        action='store_true',
-        help='Probar configuración de notificaciones'
+        "--test-notifications",
+        action="store_true",
+        help="Probar configuración de notificaciones",
     )
 
     return parser
+
 
 def parse_labels(labels_str: str) -> Dict[str, str]:
     """
@@ -360,9 +360,13 @@ class CLIConfig:
 
         # Validación de programación
         if self.schedule and self.schedule_custom:
-            raise ValueError("No se pueden especificar --schedule y --schedule-custom al mismo tiempo")
+            raise ValueError(
+                "No se pueden especificar --schedule y --schedule-custom al mismo tiempo"
+            )
 
-        if (self.schedule or self.schedule_custom) and not (self.force_docker or self.force_kubernetes or self.pod or self.container):
+        if (self.schedule or self.schedule_custom) and not (
+            self.force_docker or self.force_kubernetes or self.pod or self.container
+        ):
             # Para programación automática, se necesita detección de entorno
             pass
 
