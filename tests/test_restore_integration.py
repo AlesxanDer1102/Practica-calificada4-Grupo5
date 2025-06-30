@@ -17,42 +17,48 @@ from backup_cli.cli.parser import CLIConfig
 
 def create_test_config(backup_dir, container_name="test_db"):
     """Helper function to create test configuration"""
-    return CLIConfig(type('Args', (), {
-        'dir': str(backup_dir),
-        'verbose': False,
-        'quiet': True,
-        'force': False,
-        'name': None,
-        'list': False,
-        'restore': False,
-        'restore_file': None,
-        'no_color': True,
-        'container': container_name,
-        'pod': None,
-        'namespace': 'default',
-        'labels': None,
-        'k8s_container': None,
-        'auto_detect': True,
-        'force_docker': True,
-        'force_kubernetes': False,
-        'backup_type': 'auto',
-        'force_full': False,
-        'retention_daily': None,
-        'retention_weekly': None,
-        'retention_monthly': None,
-        'retention_full': None,
-        'apply_retention': False,
-        'retention_dry_run': False,
-        'backup_summary': False,
-        'schedule': None,
-        'schedule_custom': None,
-        'schedule_prefix': 'auto',
-        'retention_days': 7,
-        'notification_email': None,
-        'list_schedules': False,
-        'remove_schedule': None,
-        'test_notifications': False
-    })())
+    return CLIConfig(
+        type(
+            "Args",
+            (),
+            {
+                "dir": str(backup_dir),
+                "verbose": False,
+                "quiet": True,
+                "force": False,
+                "name": None,
+                "list": False,
+                "restore": False,
+                "restore_file": None,
+                "no_color": True,
+                "container": container_name,
+                "pod": None,
+                "namespace": "default",
+                "labels": None,
+                "k8s_container": None,
+                "auto_detect": True,
+                "force_docker": True,
+                "force_kubernetes": False,
+                "backup_type": "auto",
+                "force_full": False,
+                "retention_daily": None,
+                "retention_weekly": None,
+                "retention_monthly": None,
+                "retention_full": None,
+                "apply_retention": False,
+                "retention_dry_run": False,
+                "backup_summary": False,
+                "schedule": None,
+                "schedule_custom": None,
+                "schedule_prefix": "auto",
+                "retention_days": 7,
+                "notification_email": None,
+                "list_schedules": False,
+                "remove_schedule": None,
+                "test_notifications": False,
+            },
+        )()
+    )
 
 
 class TestRestoreIntegration:
@@ -271,7 +277,9 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             Mock(returncode=0, stderr=""),  # psql (restaurar)
         ]
 
-        with patch.object(orchestrator, "_check_target_availability", return_value=True):
+        with patch.object(
+            orchestrator, "_check_target_availability", return_value=True
+        ):
             result = orchestrator.restore_database(backup_path)
 
         assert result is True
@@ -305,7 +313,9 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             returncode=1, stderr="Database connection failed"
         )
 
-        with patch.object(orchestrator, "_check_target_availability", return_value=True):
+        with patch.object(
+            orchestrator, "_check_target_availability", return_value=True
+        ):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False
@@ -323,7 +333,9 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
         # Configurar mocks
         mock_input.return_value = "si"  # Confirmar restauración
 
-        with patch.object(orchestrator, "_check_target_availability", return_value=False):
+        with patch.object(
+            orchestrator, "_check_target_availability", return_value=False
+        ):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False
@@ -376,7 +388,9 @@ INSERT INTO productos VALUES (1, 'Laptop HP', 'HP', 850.00);
             cmd=["psql"], timeout=300
         )
 
-        with patch.object(orchestrator, "_check_target_availability", return_value=True):
+        with patch.object(
+            orchestrator, "_check_target_availability", return_value=True
+        ):
             result = orchestrator.restore_database(backup_path)
 
         assert result is False

@@ -9,8 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from backup_cli.cli.parser import CLIConfig, create_cli_parser
-from backup_cli.utils.colors import (Colors, print_colored_message,
-                                     should_use_colors)
+from backup_cli.utils.colors import Colors, print_colored_message, should_use_colors
 from backup_cli.utils.progress import ProgressIndicator
 
 
@@ -354,7 +353,7 @@ class TestCLIConfig:
         mock_args.force = True
         mock_args.list = False
         mock_args.no_color = False
-        
+
         # Add missing required attributes for CLIConfig
         mock_args.restore = False
         mock_args.restore_file = None
@@ -410,7 +409,7 @@ class TestCLIConfig:
         mock_args.force = False
         mock_args.list = False
         mock_args.no_color = True
-        
+
         # Add missing required attributes for CLIConfig
         mock_args.restore = False
         mock_args.restore_file = None
@@ -457,7 +456,7 @@ class TestCLIConfig:
         mock_args.force = False
         mock_args.list = False
         mock_args.no_color = False
-        
+
         # Add missing required attributes for CLIConfig
         mock_args.restore = False
         mock_args.restore_file = None

@@ -32,10 +32,10 @@ class BackupStrategy:
 
         # Configuración por defecto de retención
         self.retention_policies = {
-            'daily': 7,      # Mantener 7 backups diarios
-            'weekly': 4,     # Mantener 4 backups semanales
-            'monthly': 12,   # Mantener 12 backups mensuales
-            'full': 3        # Mantener 3 backups completos
+            "daily": 7,  # Mantener 7 backups diarios
+            "weekly": 4,  # Mantener 4 backups semanales
+            "monthly": 12,  # Mantener 12 backups mensuales
+            "full": 3,  # Mantener 3 backups completos
         }
 
     def load_backup_state(self) -> Dict:
@@ -44,22 +44,22 @@ class BackupStrategy:
         """
         if not self.state_file.exists():
             return {
-                'last_full_backup': None,
-                'last_incremental_backup': None,
-                'schema_hash': None,
-                'backups': []
+                "last_full_backup": None,
+                "last_incremental_backup": None,
+                "schema_hash": None,
+                "backups": [],
             }
 
         try:
-            with open(self.state_file, 'r') as f:
+            with open(self.state_file, "r") as f:
                 return json.load(f)
         except Exception as e:
             self.logger.error(f"Error cargando estado de backup: {e}")
             return {
-                'last_full_backup': None,
-                'last_incremental_backup': None,
-                'schema_hash': None,
-                'backups': []
+                "last_full_backup": None,
+                "last_incremental_backup": None,
+                "schema_hash": None,
+                "backups": [],
             }
 
     def save_backup_state(self, state: Dict):
@@ -67,7 +67,7 @@ class BackupStrategy:
         Guarda el estado de los backups
         """
         try:
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2, default=str)
         except Exception as e:
             self.logger.error(f"Error guardando estado de backup: {e}")
@@ -77,47 +77,53 @@ class BackupStrategy:
         Determina si el backup debe ser completo o incremental
         """
         if force_full:
-            return 'full'
+            return "full"
 
         state = self.load_backup_state()
 
         # Si no hay backup completo previo, hacer completo
-        if not state.get('last_full_backup'):
-            return 'full'
+        if not state.get("last_full_backup"):
+            return "full"
 
         # Si el último backup completo fue hace más de 7 días, hacer completo
-        last_full = datetime.fromisoformat(state['last_full_backup'])
+        last_full = datetime.fromisoformat(state["last_full_backup"])
         if datetime.now() - last_full > timedelta(days=7):
-            return 'full'
+            return "full"
 
         # Si hay más de 5 backups incrementales, hacer completo
-        incremental_count = len([b for b in state.get('backups', [])
-                               if b.get('type') == 'incremental'
-                               and datetime.fromisoformat(b['timestamp']) > last_full])
+        incremental_count = len(
+            [
+                b
+                for b in state.get("backups", [])
+                if b.get("type") == "incremental"
+                and datetime.fromisoformat(b["timestamp"]) > last_full
+            ]
+        )
 
         if incremental_count >= 5:
-            return 'full'
+            return "full"
 
-        return 'incremental'
+        return "incremental"
 
-    def create_backup_metadata(self, backup_name: str, backup_type: str,
-                             file_size: int, duration: float) -> Dict:
+    def create_backup_metadata(
+        self, backup_name: str, backup_type: str, file_size: int, duration: float
+    ) -> Dict:
         """
         Crea metadatos para el backup
         """
         metadata = {
-            'name': backup_name,
-            'type': backup_type,
-            'timestamp': datetime.now().isoformat(),
-            'file_size': file_size,
-            'duration': duration,
-            'retention_category': self._get_retention_category(backup_type)
+            "name": backup_name,
+            "type": backup_type,
+            "timestamp": datetime.now().isoformat(),
+            "file_size": file_size,
+            "duration": duration,
+            "retention_category": self._get_retention_category(backup_type),
         }
 
         # Guardar metadatos individuales
         metadata_file = self.metadata_dir / f"{backup_name}.json"
         try:
-            with open(metadata_file, 'w') as f:
+            with open(metadata_file, "w") as f:
                 json.dump(metadata, f, indent=2)
         except Exception as e:
             self.logger.error(f"Error guardando metadatos: {e}")
@@ -130,14 +136,14 @@ class BackupStrategy:
         """
         now = datetime.now()
 
-        if backup_type == 'full':
-            return 'full'
+        if backup_type == "full":
+            return "full"
         elif now.weekday() == 6:  # Domingo
-            return 'weekly'
+            return "weekly"
         elif now.day == 1:  # Primer día del mes
-            return 'monthly'
+            return "monthly"
         else:
-            return 'daily'
+            return "daily"
 
     def update_backup_state(self, backup_name: str, backup_type: str, metadata: Dict):
         """
@@ -146,13 +152,13 @@ class BackupStrategy:
         state = self.load_backup_state()
 
         # Actualizar timestamps
-        if backup_type == 'full':
-            state['last_full_backup'] = metadata['timestamp']
+        if backup_type == "full":
+            state["last_full_backup"] = metadata["timestamp"]
         else:
-            state['last_incremental_backup'] = metadata['timestamp']
+            state["last_incremental_backup"] = metadata["timestamp"]
 
         # Agregar backup a la lista
-        state['backups'].append(metadata)
+        state["backups"].append(metadata)
 
         # Guardar estado
         self.save_backup_state(state)
@@ -161,41 +167,29 @@ class BackupStrategy:
         """
         Obtiene argumentos específicos para pg_dump según el tipo de backup
         """
-        if backup_type == 'full':
+        if backup_type == "full":
             # Backup completo con esquema y datos
-            return [
-                "--clean",
-                "--create",
-                "--verbose"
-            ]
+            return ["--clean", "--create", "--verbose"]
 
-        elif backup_type == 'incremental':
+        elif backup_type == "incremental":
             # Backup incremental - solo datos sin limpiar
             # Para simplificar, hacemos un backup completo pero más ligero
-            return [
-                "--verbose",
-                "--no-owner",
-                "--no-privileges"
-            ]
+            return ["--verbose", "--no-owner", "--no-privileges"]
 
         # Fallback para cualquier otro tipo
-        return [
-            "--clean",
-            "--create",
-            "--verbose"
-        ]
+        return ["--clean", "--create", "--verbose"]
 
     def apply_retention_policy(self, dry_run: bool = False) -> Dict[str, int]:
         """
         Aplica las políticas de retención eliminando backups antiguos
         """
         state = self.load_backup_state()
-        backups = state.get('backups', [])
+        backups = state.get("backups", [])
 
         # Agrupar backups por categoría de retención
         categorized_backups = {}
         for backup in backups:
-            category = backup.get('retention_category', 'daily')
+            category = backup.get("retention_category", "daily")
             if category not in categorized_backups:
                 categorized_backups[category] = []
             categorized_backups[category].append(backup)
@@ -208,8 +202,7 @@ class BackupStrategy:
 
             # Ordenar por timestamp (más recientes primero)
             category_backups.sort(
-                key=lambda x: datetime.fromisoformat(x['timestamp']),
-                reverse=True
+                key=lambda x: datetime.fromisoformat(x["timestamp"]), reverse=True
             )
 
             # Marcar para eliminación los que excedan el límite
@@ -218,10 +211,11 @@ class BackupStrategy:
 
             for backup in to_delete:
                 if not dry_run:
-                    self._delete_backup(backup['name'])
+                    self._delete_backup(backup["name"])
                     # Remover del estado
-                    state['backups'] = [b for b in state['backups']
-                                      if b['name'] != backup['name']]
+                    state["backups"] = [
+                        b for b in state["backups"] if b["name"] != backup["name"]
+                    ]
 
         # Guardar estado actualizado
         if not dry_run:
@@ -253,23 +247,19 @@ class BackupStrategy:
         Lista backups agrupados por tipo
         """
         state = self.load_backup_state()
-        backups = state.get('backups', [])
+        backups = state.get("backups", [])
 
-        result = {
-            'full': [],
-            'incremental': []
-        }
+        result = {"full": [], "incremental": []}
 
         for backup in backups:
-            backup_type = backup.get('type', 'full')
+            backup_type = backup.get("type", "full")
             if backup_type in result:
                 result[backup_type].append(backup)
 
         # Ordenar por timestamp
         for backup_list in result.values():
             backup_list.sort(
-                key=lambda x: datetime.fromisoformat(x['timestamp']),
-                reverse=True
+                key=lambda x: datetime.fromisoformat(x["timestamp"]), reverse=True
             )
 
         return result
@@ -279,25 +269,25 @@ class BackupStrategy:
         Obtiene resumen de la política de retención actual
         """
         state = self.load_backup_state()
-        backups = state.get('backups', [])
+        backups = state.get("backups", [])
 
         # Contar backups por categoría
         category_counts = {}
         for backup in backups:
-            category = backup.get('retention_category', 'daily')
+            category = backup.get("retention_category", "daily")
             category_counts[category] = category_counts.get(category, 0) + 1
 
         # Crear resumen
         summary = {
-            'policies': self.retention_policies.copy(),
-            'current_counts': category_counts,
-            'total_backups': len(backups)
+            "policies": self.retention_policies.copy(),
+            "current_counts": category_counts,
+            "total_backups": len(backups),
         }
 
         # Calcular espacio usado
-        total_size = sum(backup.get('file_size', 0) for backup in backups)
-        summary['total_size_bytes'] = total_size
-        summary['total_size_mb'] = round(total_size / (1024 * 1024), 2)
+        total_size = sum(backup.get("file_size", 0) for backup in backups)
+        summary["total_size_bytes"] = total_size
+        summary["total_size_mb"] = round(total_size / (1024 * 1024), 2)
 
         return summary
 
@@ -308,7 +298,9 @@ class BackupStrategy:
         for category, count in policies.items():
             if category in self.retention_policies and count > 0:
                 self.retention_policies[category] = count
-                self.logger.info(f"Política de retención actualizada: {category} = {count}")
+                self.logger.info(
+                    f"Política de retención actualizada: {category} = {count}"
+                )
 
     def get_next_backup_recommendation(self) -> Dict:
         """
@@ -317,25 +309,31 @@ class BackupStrategy:
         backup_type = self.determine_backup_type()
         state = self.load_backup_state()
 
-        recommendation = {
-            'type': backup_type,
-            'reason': ''
-        }
+        recommendation = {"type": backup_type, "reason": ""}
 
-        if backup_type == 'full':
-            if not state.get('last_full_backup'):
-                recommendation['reason'] = 'No existe backup completo previo'
+        if backup_type == "full":
+            if not state.get("last_full_backup"):
+                recommendation["reason"] = "No existe backup completo previo"
             else:
-                last_full = datetime.fromisoformat(state['last_full_backup'])
+                last_full = datetime.fromisoformat(state["last_full_backup"])
                 days_since = (datetime.now() - last_full).days
                 if days_since >= 7:
-                    recommendation['reason'] = f'Último backup completo hace {days_since} días'
+                    recommendation["reason"] = (
+                        f"Último backup completo hace {days_since} días"
+                    )
                 else:
-                    incremental_count = len([b for b in state.get('backups', [])
-                                           if b.get('type') == 'incremental'
-                                           and datetime.fromisoformat(b['timestamp']) > last_full])
-                    recommendation['reason'] = f'Demasiados backups incrementales ({incremental_count})'
+                    incremental_count = len(
+                        [
+                            b
+                            for b in state.get("backups", [])
+                            if b.get("type") == "incremental"
+                            and datetime.fromisoformat(b["timestamp"]) > last_full
+                        ]
+                    )
+                    recommendation["reason"] = (
+                        f"Demasiados backups incrementales ({incremental_count})"
+                    )
         else:
-            recommendation['reason'] = 'Backup incremental recomendado'
+            recommendation["reason"] = "Backup incremental recomendado"
 
         return recommendation

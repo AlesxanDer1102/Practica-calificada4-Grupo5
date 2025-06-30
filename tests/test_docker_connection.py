@@ -13,42 +13,48 @@ from backup_cli.cli.parser import CLIConfig
 
 def create_test_config(backup_dir, container_name="test_db"):
     """Helper function to create test configuration"""
-    return CLIConfig(type('Args', (), {
-        'dir': str(backup_dir),
-        'verbose': False,
-        'quiet': True,
-        'force': False,
-        'name': None,
-        'list': False,
-        'restore': False,
-        'restore_file': None,
-        'no_color': True,
-        'container': container_name,
-        'pod': None,
-        'namespace': 'default',
-        'labels': None,
-        'k8s_container': None,
-        'auto_detect': True,
-        'force_docker': True,
-        'force_kubernetes': False,
-        'backup_type': 'auto',
-        'force_full': False,
-        'retention_daily': None,
-        'retention_weekly': None,
-        'retention_monthly': None,
-        'retention_full': None,
-        'apply_retention': False,
-        'retention_dry_run': False,
-        'backup_summary': False,
-        'schedule': None,
-        'schedule_custom': None,
-        'schedule_prefix': 'auto',
-        'retention_days': 7,
-        'notification_email': None,
-        'list_schedules': False,
-        'remove_schedule': None,
-        'test_notifications': False
-    })())
+    return CLIConfig(
+        type(
+            "Args",
+            (),
+            {
+                "dir": str(backup_dir),
+                "verbose": False,
+                "quiet": True,
+                "force": False,
+                "name": None,
+                "list": False,
+                "restore": False,
+                "restore_file": None,
+                "no_color": True,
+                "container": container_name,
+                "pod": None,
+                "namespace": "default",
+                "labels": None,
+                "k8s_container": None,
+                "auto_detect": True,
+                "force_docker": True,
+                "force_kubernetes": False,
+                "backup_type": "auto",
+                "force_full": False,
+                "retention_daily": None,
+                "retention_weekly": None,
+                "retention_monthly": None,
+                "retention_full": None,
+                "apply_retention": False,
+                "retention_dry_run": False,
+                "backup_summary": False,
+                "schedule": None,
+                "schedule_custom": None,
+                "schedule_prefix": "auto",
+                "retention_days": 7,
+                "notification_email": None,
+                "list_schedules": False,
+                "remove_schedule": None,
+                "test_notifications": False,
+            },
+        )()
+    )
 
 
 class TestDockerConnection:
@@ -61,10 +67,10 @@ class TestDockerConnection:
         Test que verifica que _check_target_availability() retorna True cuando el contenedor existe.
         """
         container_json = '[{"State": {"Running": true}}]'
-        
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout=container_json)
-            
+
             # Ejecutar la verificación
             result = orchestrator_instance._check_target_availability("test_db")
 
@@ -76,8 +82,10 @@ class TestDockerConnection:
         Test que verifica que _check_target_availability() retorna False cuando el contenedor no existe.
         """
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=1, stdout="", stderr="No such container")
-            
+            mock_run.return_value = Mock(
+                returncode=1, stdout="", stderr="No such container"
+            )
+
             # Ejecutar la verificación
             result = orchestrator_instance._check_target_availability("test_db")
 
@@ -131,7 +139,7 @@ class TestDockerConnection:
         orchestrator = UnifiedBackupOrchestrator(config)
 
         container_json = '[{"State": {"Running": true}}]'
-        
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout=container_json)
 

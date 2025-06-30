@@ -12,12 +12,12 @@ from backup_cli.cli.parser import CLIConfig, create_cli_parser
 from backup_cli.environment.detector import Environment, EnvironmentDetector
 from backup_cli.handlers.docker_handler import DockerHandler
 from backup_cli.handlers.kubernetes_handler import KubernetesHandler
-from backup_cli.utils.colors import (Colors, print_colored_message,
-                                     should_use_colors)
+from backup_cli.utils.colors import Colors, print_colored_message, should_use_colors
 from backup_cli.utils.progress import ProgressIndicator
 from backup_cli.utils.validator import BackupNameValidator, format_file_size
 from backup_cli.backup_strategy import BackupStrategy
 from backup_cli.utils.colors import Colors, should_use_colors, print_colored_message
+
 
 class UnifiedBackupOrchestrator:
     """
@@ -53,13 +53,13 @@ class UnifiedBackupOrchestrator:
         # Configurar políticas de retención si se especificaron
         retention_updates = {}
         if config.retention_daily:
-            retention_updates['daily'] = config.retention_daily
+            retention_updates["daily"] = config.retention_daily
         if config.retention_weekly:
-            retention_updates['weekly'] = config.retention_weekly
+            retention_updates["weekly"] = config.retention_weekly
         if config.retention_monthly:
-            retention_updates['monthly'] = config.retention_monthly
+            retention_updates["monthly"] = config.retention_monthly
         if config.retention_full:
-            retention_updates['full'] = config.retention_full
+            retention_updates["full"] = config.retention_full
 
         if retention_updates:
             self.backup_strategy.configure_retention_policy(**retention_updates)
@@ -357,19 +357,23 @@ class UnifiedBackupOrchestrator:
         Crea un backup de la base de datos con estrategia automática
         """
         # Determinar tipo de backup
-        backup_type = 'full'
-        if self.config.backup_type == 'auto':
-            backup_type = self.backup_strategy.determine_backup_type(self.config.force_full)
-        elif self.config.backup_type in ['full', 'incremental']:
+        backup_type = "full"
+        if self.config.backup_type == "auto":
+            backup_type = self.backup_strategy.determine_backup_type(
+                self.config.force_full
+            )
+        elif self.config.backup_type in ["full", "incremental"]:
             backup_type = self.config.backup_type
         elif self.config.force_full:
-            backup_type = 'full'
+            backup_type = "full"
 
         # Mostrar recomendación si es automático
-        if self.config.backup_type == 'auto' and self.config.show_progress:
+        if self.config.backup_type == "auto" and self.config.show_progress:
             recommendation = self.backup_strategy.get_next_backup_recommendation()
-            self._print_message('INFO', f"Tipo de backup recomendado: {recommendation['type']}")
-            self._print_message('INFO', f"Razón: {recommendation['reason']}")
+            self._print_message(
+                "INFO", f"Tipo de backup recomendado: {recommendation['type']}"
+            )
+            self._print_message("INFO", f"Razón: {recommendation['reason']}")
 
         start_time = time.time()
 
@@ -386,7 +390,7 @@ class UnifiedBackupOrchestrator:
 
         # Añadir sufijo del tipo de backup
         if not custom_name:
-            base_name = backup_filename.replace('.sql', '')
+            base_name = backup_filename.replace(".sql", "")
             backup_filename = f"{base_name}_{backup_type}.sql"
 
         backup_path = self.backup_dir / backup_filename
@@ -433,7 +437,13 @@ class UnifiedBackupOrchestrator:
             self.logger.info(f"Iniciando backup {backup_type}: {backup_filename}")
 
             # Preparar comando pg_dump con estrategia específica
-            cmd = ["pg_dump", "-U", self.db_config["user"], "-d", self.db_config["database"]]
+            cmd = [
+                "pg_dump",
+                "-U",
+                self.db_config["user"],
+                "-d",
+                self.db_config["database"],
+            ]
             cmd.extend(self.backup_strategy.get_backup_command_args(backup_type))
 
             # Iniciar progreso de backup
@@ -464,7 +474,7 @@ class UnifiedBackupOrchestrator:
 
             if result.returncode == 0:
                 # Escribir el backup al archivo
-                with open(backup_path, 'w', encoding='utf-8') as f:
+                with open(backup_path, "w", encoding="utf-8") as f:
                     f.write(result.stdout)
 
                 file_size = backup_path.stat().st_size
@@ -472,27 +482,31 @@ class UnifiedBackupOrchestrator:
 
                 # Crear metadatos del backup
                 metadata = self.backup_strategy.create_backup_metadata(
-                    backup_filename.replace('.sql', ''),
+                    backup_filename.replace(".sql", ""),
                     backup_type,
                     file_size,
-                    duration
+                    duration,
                 )
 
                 # Actualizar estado
                 self.backup_strategy.update_backup_state(
-                    backup_filename.replace('.sql', ''),
-                    backup_type,
-                    metadata
+                    backup_filename.replace(".sql", ""), backup_type, metadata
                 )
 
-                self.logger.info(f"Backup {backup_type} completado exitosamente: {backup_filename} ({file_size} bytes)")
+                self.logger.info(
+                    f"Backup {backup_type} completado exitosamente: {backup_filename} ({file_size} bytes)"
+                )
 
                 if self.config.show_progress:
                     backup_progress.complete(True)
-                    self._print_message('INFO', f"Tipo de backup: {backup_type.upper()}")
-                    self._print_message('INFO', f"Tamaño del backup: {format_file_size(file_size)}")
-                    self._print_message('INFO', f"Duración: {duration:.1f} segundos")
-                    self._print_message('INFO', f"Ubicación: {backup_path.absolute()}")
+                    self._print_message(
+                        "INFO", f"Tipo de backup: {backup_type.upper()}"
+                    )
+                    self._print_message(
+                        "INFO", f"Tamaño del backup: {format_file_size(file_size)}"
+                    )
+                    self._print_message("INFO", f"Duración: {duration:.1f} segundos")
+                    self._print_message("INFO", f"Ubicación: {backup_path.absolute()}")
 
                 return True
             else:
@@ -717,7 +731,9 @@ def display_header(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
         print("-" * 50)
 
 
-def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBackupOrchestrator, use_colors: bool) -> int:
+def handle_backup_strategy_commands(
+    config: CLIConfig, orchestrator: UnifiedBackupOrchestrator, use_colors: bool
+) -> int:
     """
     Maneja comandos relacionados con estrategias de backup y retención
     """
@@ -725,15 +741,17 @@ def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBack
 
     # Mostrar resumen de backups
     if config.backup_summary:
-        print_colored_message('INFO', 'Resumen de backups y políticas de retención:', use_colors)
+        print_colored_message(
+            "INFO", "Resumen de backups y políticas de retención:", use_colors
+        )
 
         # Obtener resumen de retención
         summary = backup_strategy.get_retention_summary()
 
         print(f"\n📊 POLÍTICAS DE RETENCIÓN")
         print("-" * 40)
-        for category, count in summary['policies'].items():
-            current = summary['current_counts'].get(category, 0)
+        for category, count in summary["policies"].items():
+            current = summary["current_counts"].get(category, 0)
             print(f"  {category.capitalize()}: {current}/{count} backups")
 
         print(f"\n📈 ESTADÍSTICAS")
@@ -750,9 +768,11 @@ def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBack
             if backups:
                 print(f"\n{backup_type.upper()} ({len(backups)}):")
                 for backup in backups[:3]:  # Mostrar últimos 3
-                    timestamp = datetime.fromisoformat(backup['timestamp'])
-                    size_mb = backup.get('file_size', 0) / (1024 * 1024)
-                    print(f"  • {backup['name']} - {timestamp.strftime('%Y-%m-%d %H:%M')} ({size_mb:.1f} MB)")
+                    timestamp = datetime.fromisoformat(backup["timestamp"])
+                    size_mb = backup.get("file_size", 0) / (1024 * 1024)
+                    print(
+                        f"  • {backup['name']} - {timestamp.strftime('%Y-%m-%d %H:%M')} ({size_mb:.1f} MB)"
+                    )
                 if len(backups) > 3:
                     print(f"  ... y {len(backups) - 3} más")
 
@@ -770,14 +790,18 @@ def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBack
         dry_run = config.retention_dry_run
         action = "Simulando" if dry_run else "Aplicando"
 
-        print_colored_message('INFO', f'{action} políticas de retención...', use_colors)
+        print_colored_message("INFO", f"{action} políticas de retención...", use_colors)
 
         deleted_counts = backup_strategy.apply_retention_policy(dry_run=dry_run)
 
         total_deleted = sum(deleted_counts.values())
 
         if total_deleted == 0:
-            print_colored_message('INFO', 'No hay backups que eliminar según las políticas actuales', use_colors)
+            print_colored_message(
+                "INFO",
+                "No hay backups que eliminar según las políticas actuales",
+                use_colors,
+            )
         else:
             print(f"\n🗑️  BACKUPS {'A ELIMINAR' if dry_run else 'ELIMINADOS'}")
             print("-" * 40)
@@ -787,9 +811,17 @@ def handle_backup_strategy_commands(config: CLIConfig, orchestrator: UnifiedBack
             print(f"  Total: {total_deleted} backups")
 
             if dry_run:
-                print_colored_message('INFO', 'Ejecutar sin --retention-dry-run para eliminar realmente', use_colors)
+                print_colored_message(
+                    "INFO",
+                    "Ejecutar sin --retention-dry-run para eliminar realmente",
+                    use_colors,
+                )
             else:
-                print_colored_message('SUCCESS', f'{total_deleted} backups eliminados exitosamente', use_colors)
+                print_colored_message(
+                    "SUCCESS",
+                    f"{total_deleted} backups eliminados exitosamente",
+                    use_colors,
+                )
 
         return 0
 
@@ -822,7 +854,7 @@ def main():
         orchestrator = UnifiedBackupOrchestrator(config)
 
         # Manejar comandos de estrategias de backup
-        if (config.backup_summary or config.apply_retention or config.retention_dry_run):
+        if config.backup_summary or config.apply_retention or config.retention_dry_run:
             return handle_backup_strategy_commands(config, orchestrator, use_colors)
 
         # Manejar comando de lista
