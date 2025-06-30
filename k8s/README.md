@@ -1,148 +1,184 @@
-# PostgreSQL + Aplicación Python en Kubernetes
+# Despliegue Local: PostgreSQL + Aplicación Python en Minikube
 
-Este directorio contiene todos los archivos YAML necesarios para desplegar una base de datos PostgreSQL junto con una aplicación Python en Kubernetes, organizados por tipo de servicio.
+Este repositorio contiene todo lo necesario para construir y orquestar **localmente** en Minikube:
 
-## Estructura del Directorio
+- Una base de datos PostgreSQL empaquetada en una imagen Docker propia, con scripts de inicialización.
+- Una aplicación Python (backend + orquestador de backups) en su propia imagen Docker.
+- Manifiestos Kubernetes (StatefulSet, PVC, Deployments, Services) organizados de forma clara.
+
+---
+
+## Estructura de tu proyecto
 
 ```
-k8s/
-├── postgres/                 # Recursos relacionados con PostgreSQL
-│   ├── secret.yaml           # Credenciales de la base de datos
-│   ├── configmap.yaml        # Scripts de inicialización SQL
-│   ├── pvc.yaml              # Almacenamiento persistente
-│   ├── deployment.yaml       # Configuración del pod PostgreSQL
-│   └── service.yaml          # Servicio de PostgreSQL
-├── python/                   # Recursos de la aplicación Python
-│   └── deployment.yaml       # Pod de la aplicación Python
-├── deploy.sh                 # Desplegar todo
-├── cleanup.sh                # Eliminar todos los recursos
-└── README.md                 # Este archivo
-```
 
-## Antes del Despliegue
+Practica-calificada4-Grupo5/
+├── pos\_db/
+│   ├── 01-init.sql
+│   └── 02-seed\_data.sql
+├── src/                         # Código del backend Python
+├── backup\_cli/                  # Código del orquestador de backups
+├── app.py
+├── backup\_orchestrator.py
+├── requirements.txt
+├── Dockerfile-backend           # Imagen de la app Python
+├── k8s/
+│   ├── postgres/
+│   │   ├── Dockerfile-postgres
+│   │   ├── postgres-secret.yaml
+│   │   ├── postgres-service.yaml
+│   │   └── postgres-statefulset.yaml
+│   └── backend/
+│       ├── backend-deployment.yaml
+│       └── backend-service.yaml
+├── deploy.sh                    # Script para build + apply
+└── cleanup.sh                   # Script para borrar recursos
 
-1. **Verificar que minikube está ejecutándose**:
+````
+
+---
+
+## Prerrequisitos
+
+- **Minikube** instalado (v1.30+).
+- **kubectl** configurado.
+- **Docker** local para construir imágenes.
+
+---
+
+## Primeros pasos
+
+1. **Arrancar Minikube**
+   ```bash
+   minikube start --driver=docker
+````
+
+2. **Enviar tu terminal Docker al daemon de Minikube**
 
    ```bash
-   # Ejecutamos primeramente
-   minikube start
-
-   # Verificamos el estado actual
-   minikube status
-
-   # En caso de error podemos detenerlo y volverlo a iniciar
-   minikube stop
-   ```
-
-2. **Construir y preparar la imagen Docker de Python**:
-
-   ```bash
-   # Configurar Docker para minikube
    eval $(minikube docker-env)
-
-   # Construir imagen localmente de la bd
-   docker build -f k8s/postgres/Dockerfile -t custom-postgres:latest .
-
-   # Construimos la imagen localmente del backend en pthon
-
-   docker build -f Dockerfile -t miapp:latest .
-
-   # Verificar imagenes
-   docker images | grep -E "custom-postgres|miapp"
    ```
 
-3. **Verificar configuración del deployment**:
-   El archivo `backend/deployment.yaml` debe tener:
+---
 
-```yaml
-yamlcontainers:
-  - name: backend
-    image: miapp:latest
-    imagePullPolicy: Never
-```
+## Construir imágenes Docker
 
-**Nota importante**: La línea `imagePullPolicy: Never` es esencial para evitar que Kubernetes trate de descargar la imagen desde un registro remoto.
-
-## Instrucciones de despliegue
-
-Podemos desplegar todo automáticamente usando el script `deploy.sh`:
+Desde la raíz del proyecto:
 
 ```bash
-chmod +x ./deploy.sh
+# 1. Imagen de PostgreSQL con scripts embebidos
+docker build -f k8s/postgres/Dockerfile-postgres \
+  -t custom-postgres:latest .
+
+# 2. Imagen del backend Python (app + backup orchestrator)
+docker build -f Dockerfile-backend \
+  -t python-backend:dev .
+```
+
+Verifica que ambas imágenes existen:
+
+```bash
+docker images | grep -E "custom-postgres|python-backend"
+```
+
+---
+
+## Despliegue en Kubernetes
+
+### 1. Desplegar PostgreSQL
+
+```bash
+kubectl apply -f k8s/postgres/postgres-secret.yaml
+kubectl apply -f k8s/postgres/postgres-service.yaml
+kubectl apply -f k8s/postgres/postgres-statefulset.yaml
+```
+
+### 2. Desplegar el backend Python
+
+```bash
+kubectl apply -f k8s/backend/backend-deployment.yaml
+kubectl apply -f k8s/backend/backend-service.yaml
+```
+
+---
+
+## Verificaciones
+
+```bash
+# Estado general
+kubectl get pods,svc,pvc
+
+# Logs de Postgres para confirmar init/seed
+kubectl logs statefulset/postgres-0
+
+# Logs del backend
+kubectl logs deployment/backend
+```
+
+---
+
+## Acceso a la aplicación
+
+```bash
+# Exponer puerto 3000 a localhost
+kubectl port-forward svc/backend-svc 3000:3000
+
+# Probar endpoint (e.g. /health)
+curl http://localhost:3000/health
+```
+
+---
+
+## Scripts de conveniencia
+# Dar permisos de ejecucion
+```bash
+chmod +x deploy.sh cleanup.sh
+```
+
+# Deploy
+
+```bash
 ./deploy.sh
 ```
 
-Para eliminar lo creado podemos igualmente usar el script `cleanup.sh`:
-
+# Limpieza
 ```bash
-chmod +x ./cleanup.sh
 ./cleanup.sh
 ```
 
-## Monitoreo y Solución de Problemas
+---
 
-### Verificar Estado
+## 🩺 Solución de problemas
 
-```bash
-# Todos los pods
-kubectl get pods
+1. **Pods en CrashLoop / ConfigError**
 
-# Todos los servicios
-kubectl get services
+   ```bash
+   kubectl describe pod <POD_NAME>
+   ```
 
-# Todos los PVCs
-kubectl get pvc
+2. **Reiniciar un Deployment**
 
-# Revisa logs de Postgres para confirmar init/seed
-kubectl logs statefulset/postgres-0
+   ```bash
+   kubectl rollout restart deployment/backend
+   ```
 
-# Revisa logs de tu backend
-kubectl logs deployment/backend
-```
+3. **Eliminar todo y recomenzar**
 
-### Ver Registros
+   ```bash
+   ./cleanup.sh
+   ./deploy.sh
+   ```
 
-```bash
-# Logs de PostgreSQL (StatefulSet)
-kubectl logs statefulset/postgres-0
+---
 
-# Logs del backend Python (Deployment)
-kubectl logs deployment/backend
+## 🔑 Variables de entorno inyectadas al backend
 
-# Seguir los logs en tiempo real del backend
-kubectl logs -f deployment/backend
-```
+El Deployment Python define:
 
-### Acceso a la Base de Datos
+* `DB_HOST=postgres-0.postgres`
+* `DB_PORT=5432`
+* `DB_NAME=pc_db`
+* `DB_USER=postgres`
+* `DB_PASSWORD` (desde `postgres-secret`)
 
-```bash
-# Abrir un shell psql dentro del pod de Postgres
-kubectl exec -it statefulset/postgres-0 -- psql -U postgres -d pc_db
-```
-
-### Acceso a la aplicación
-
-```bash
-# Forward del puerto 3000 de tu servicio al localhost
-kubectl port-forward svc/backend-svc 3000:3000
-
-# En otra terminal, probar un endpoint (por ejemplo /health)
-curl http://localhost:3000/health
-
-kubectl exec -it deployment/backend -- bash
-# dentro del pod:
-python3 app.py
-```
-
-## Variables de Entorno Disponibles para el Backend Python
-Estas variables se inyectan automáticamente desde el Secret y el StatefulSet:
-
--`DB_HOST=postgres-0.postgres`
-
--`DB_PORT=5432`
-
--`DB_USER=postgres`
-
--`DB_PASSWORD (desde el Secret postgres-secret)`
-
--`DB_NAME=pc_db`
+¡Listo! Con esta documentación actualizada tienes un flujo claro para construir y orquestar tu base de datos Postgres y tu aplicación Python con Minikube.

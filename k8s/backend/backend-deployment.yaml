@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: miapp:latest
-          imagePullPolicy: Never
+          image: miapp:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3000
