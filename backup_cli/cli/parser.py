@@ -1,3 +1,8 @@
+"""
+Parser de argumentos de línea de comandos para el orquestador de backup
+Soporta tanto Docker como Kubernetes
+"""
+
 import argparse
 from typing import Dict, Optional
 
@@ -35,6 +40,7 @@ Opciones generales:
         """,
     )
 
+    # Argumentos generales
     parser.add_argument(
         "--name",
         "-n",
@@ -91,7 +97,7 @@ Opciones generales:
     parser.add_argument(
         "--no-color", action="store_true", help="Deshabilitar salida coloreada"
     )
-
+    
     docker_group = parser.add_argument_group("Opciones de Docker")
     docker_group.add_argument(
         "--container",
@@ -99,6 +105,7 @@ Opciones generales:
         type=str,
         help="Nombre del contenedor Docker (para entorno Docker)",
     )
+
 
     k8s_group = parser.add_argument_group("Opciones de Kubernetes")
     k8s_group.add_argument(
@@ -144,11 +151,122 @@ Opciones generales:
         help="Forzar uso de Kubernetes (ignora detección automática)",
     )
 
+    # Opciones de estrategias de backup
+    backup_group = parser.add_argument_group('Estrategias de backup y retención')
+    backup_group.add_argument(
+        '--backup-type',
+        choices=['auto', 'full', 'incremental'],
+        default='auto',
+        help='Tipo de backup: auto (decide automáticamente), full (completo), incremental'
+    )
+
+    backup_group.add_argument(
+        '--force-full',
+        action='store_true',
+        help='Forzar backup completo ignorando la estrategia automática'
+    )
+
+    backup_group.add_argument(
+        '--retention-daily',
+        type=int,
+        help='Número de backups diarios a mantener (predeterminado: 7)'
+    )
+
+    backup_group.add_argument(
+        '--retention-weekly',
+        type=int,
+        help='Número de backups semanales a mantener (predeterminado: 4)'
+    )
+
+    backup_group.add_argument(
+        '--retention-monthly',
+        type=int,
+        help='Número de backups mensuales a mantener (predeterminado: 12)'
+    )
+
+    backup_group.add_argument(
+        '--retention-full',
+        type=int,
+        help='Número de backups completos a mantener (predeterminado: 3)'
+    )
+
+    backup_group.add_argument(
+        '--apply-retention',
+        action='store_true',
+        help='Aplicar políticas de retención eliminando backups antiguos'
+    )
+
+    backup_group.add_argument(
+        '--retention-dry-run',
+        action='store_true',
+        help='Mostrar qué backups se eliminarían sin eliminarlos realmente'
+    )
+
+    backup_group.add_argument(
+        '--backup-summary',
+        action='store_true',
+        help='Mostrar resumen de backups y políticas de retención'
+    )
+
+    # Opciones de programación automática
+    schedule_group = parser.add_argument_group('Programación de backups automáticos')
+    schedule_group.add_argument(
+        '--schedule',
+        type=str,
+        choices=['hourly', 'daily', 'weekly', 'monthly', 'workdays'],
+        help='Configurar backup automático con frecuencia predefinida'
+    )
+
+    schedule_group.add_argument(
+        '--schedule-custom',
+        type=str,
+        help='Configurar backup automático con cron schedule personalizado (formato: "0 2 * * *")'
+    )
+
+    schedule_group.add_argument(
+        '--schedule-prefix',
+        type=str,
+        default='auto',
+        help='Prefijo para nombres de backups automáticos (predeterminado: auto)'
+    )
+
+    schedule_group.add_argument(
+        '--retention-days',
+        type=int,
+        default=7,
+        help='Días de retención para backups automáticos (predeterminado: 7)'
+    )
+
+    schedule_group.add_argument(
+        '--notification-email',
+        type=str,
+        help='Email para notificaciones de backups automáticos'
+    )
+
+    schedule_group.add_argument(
+        '--list-schedules',
+        action='store_true',
+        help='Listar programaciones de backup existentes'
+    )
+
+    schedule_group.add_argument(
+        '--remove-schedule',
+        type=str,
+        help='Eliminar programación de backup (usar nombre o patrón)'
+    )
+
+    schedule_group.add_argument(
+        '--test-notifications',
+        action='store_true',
+        help='Probar configuración de notificaciones'
+    )
+
     return parser
 
-
 def parse_labels(labels_str: str) -> Dict[str, str]:
-
+    """
+    Parsea una cadena de labels en formato key1=value1,key2=value2
+    """
     if not labels_str:
         return {}
 
@@ -162,6 +280,9 @@ def parse_labels(labels_str: str) -> Dict[str, str]:
 
 
 class CLIConfig:
+    """
+    Configuración derivada de los argumentos de línea de comandos
+    """
 
     def __init__(self, args):
         # Argumentos generales
@@ -189,6 +310,27 @@ class CLIConfig:
         self.force_docker = args.force_docker
         self.force_kubernetes = args.force_kubernetes
 
+        # Opciones de estrategias de backup
+        self.backup_type = args.backup_type
+        self.force_full = args.force_full
+        self.retention_daily = args.retention_daily
+        self.retention_weekly = args.retention_weekly
+        self.retention_monthly = args.retention_monthly
+        self.retention_full = args.retention_full
+        self.apply_retention = args.apply_retention
+        self.retention_dry_run = args.retention_dry_run
+        self.backup_summary = args.backup_summary
+
+        # Opciones de programación
+        self.schedule = args.schedule
+        self.schedule_custom = args.schedule_custom
+        self.schedule_prefix = args.schedule_prefix
+        self.retention_days = args.retention_days
+        self.notification_email = args.notification_email
+        self.list_schedules = args.list_schedules
+        self.remove_schedule = args.remove_schedule
+        self.test_notifications = args.test_notifications
+
         # Configuraciones derivadas
         self.show_progress = not args.quiet
         self.use_colors = not args.no_color
@@ -197,7 +339,9 @@ class CLIConfig:
         self._validate_arguments()
 
     def _validate_arguments(self):
-
+        """
+        Valida que los argumentos sean coherentes
+        """
         # No se pueden forzar ambos entornos
         if self.force_docker and self.force_kubernetes:
             raise ValueError(
@@ -214,8 +358,18 @@ class CLIConfig:
                 "--container sin --pod no es compatible con --force-kubernetes"
             )
 
-    def get_preferred_environment(self) -> Optional[str]:
+        # Validación de programación
+        if self.schedule and self.schedule_custom:
+            raise ValueError("No se pueden especificar --schedule y --schedule-custom al mismo tiempo")
 
+        if (self.schedule or self.schedule_custom) and not (self.force_docker or self.force_kubernetes or self.pod or self.container):
+            # Para programación automática, se necesita detección de entorno
+            pass
+
+    def get_preferred_environment(self) -> Optional[str]:
+        """
+        Determina el entorno preferido basado en los argumentos
+        """
         if self.force_docker:
             return "docker"
         elif self.force_kubernetes:

@@ -129,6 +129,244 @@ pip3 install -r requirements.txt
 python3 app.py
 ```
 
+
+# Orquestrador de Backup
+
+## Funcionalidades
+
+- **Detección automática de entorno**: Docker vs Kubernetes
+- **Estrategias de backup**: Completos e incrementales con decisión automática
+- **Políticas de retención**: Eliminación automática por categorías (daily, weekly, monthly, full)
+- **Multi-entorno**: Contenedores Docker y pods Kubernetes
+
+## Estrategias de Backup
+
+### Backup Completo (Full)
+- Incluye esquema completo y todos los datos
+- Argumentos pg_dump: `--clean --create --verbose`
+- Se ejecuta automáticamente cuando:
+  - No existe backup completo previo
+  - Último backup completo > 7 días
+  - Hay más de 5 backups incrementales desde el último completo
+
+### Backup Incremental
+- Backup optimizado sin metadatos de permisos
+- Argumentos pg_dump: `--verbose --no-owner --no-privileges`
+- Se ejecuta cuando hay un backup completo reciente y pocos incrementales
+
+### Decisión Automática
+- El sistema evalúa el estado actual y decide el tipo apropiado
+- Mantiene balance entre eficiencia y completitud
+- Utiliza metadatos almacenados en `.metadata/backup_state.json`
+
+## Comandos de Backup
+
+### Comandos Básicos
+```bash
+# Backup automático (decisión inteligente)
+python3 backup_orchestrator.py
+
+# Backup con información detallada
+python3 backup_orchestrator.py --verbose
+
+# Backup con nombre personalizado
+python3 backup_orchestrator.py --name "backup_personalizado"
+
+# Backup en directorio específico
+python3 backup_orchestrator.py --dir /ruta/backups
+```
+
+### Estrategias Específicas
+```bash
+# Forzar backup completo
+python3 backup_orchestrator.py --force-full
+
+# Especificar tipo explícitamente
+python3 backup_orchestrator.py --backup-type full
+python3 backup_orchestrator.py --backup-type incremental
+python3 backup_orchestrator.py --backup-type auto
+
+# Backup completo con nombre específico
+python3 backup_orchestrator.py --force-full --name "pre_migration"
+```
+
+### Restauración
+```bash
+# Restauración interactiva (selecciona de lista)
+python3 backup_orchestrator.py --restore
+
+# Restaurar archivo específico
+python3 backup_orchestrator.py --restore --restore-file backups/backup_20250630.sql
+
+# Restauración silenciosa
+python3 backup_orchestrator.py --restore --quiet
+```
+
+## Políticas de Retención
+
+### Categorías de Retención
+- **Daily**: Backups regulares (lunes a sábado)
+- **Weekly**: Backups creados en domingo
+- **Monthly**: Backups creados el día 1 del mes
+- **Full**: Todos los backups completos
+
+### Límites por Defecto
+- Daily: 7 backups
+- Weekly: 4 backups
+- Monthly: 12 backups
+- Full: 3 backups
+
+### Comandos de Configuración
+```bash
+# Configurar políticas individuales
+python3 backup_orchestrator.py --retention-daily 10
+python3 backup_orchestrator.py --retention-weekly 6
+python3 backup_orchestrator.py --retention-monthly 24
+python3 backup_orchestrator.py --retention-full 5
+
+# Configurar múltiples políticas
+python3 backup_orchestrator.py \
+  --retention-daily 15 \
+  --retention-weekly 8 \
+  --retention-monthly 36 \
+  --retention-full 10
+```
+
+### Aplicación de Políticas
+```bash
+# Ver qué backups se eliminarían (dry run)
+python3 backup_orchestrator.py --retention-dry-run
+
+# Aplicar políticas de retención
+python3 backup_orchestrator.py --apply-retention
+
+# Configurar y aplicar en un comando
+python3 backup_orchestrator.py \
+  --retention-daily 5 \
+  --apply-retention
+```
+
+## Comandos de Gestión
+
+### Información y Listado
+```bash
+# Listar backups existentes
+python3 backup_orchestrator.py --list
+
+# Resumen completo de backups y políticas
+python3 backup_orchestrator.py --backup-summary
+
+# Ver ayuda completa
+python3 backup_orchestrator.py --help
+```
+
+### Opciones de Salida
+```bash
+# Ejecución silenciosa
+python3 backup_orchestrator.py --quiet
+
+# Sin colores en la salida
+python3 backup_orchestrator.py --no-color
+
+# Sobrescribir backup existente
+python3 backup_orchestrator.py --name "backup" --force
+```
+
+## Comandos Específicos por Entorno
+
+### Kubernetes
+```bash
+# Detección automática (busca app=postgres)
+python3 backup_orchestrator.py
+
+# Pod específico
+python3 backup_orchestrator.py --pod postgres-0
+
+# Namespace específico
+python3 backup_orchestrator.py --pod postgres-0 --namespace production
+
+# Selección por labels
+python3 backup_orchestrator.py --labels app=postgres,version=13
+
+# Contenedor específico en pod
+python3 backup_orchestrator.py --pod postgres-0 --k8s-container postgres
+
+# Forzar entorno Kubernetes
+python3 backup_orchestrator.py --force-kubernetes
+```
+
+### Docker
+```bash
+# Detección automática de contenedores PostgreSQL
+python3 backup_orchestrator.py
+
+# Contenedor específico
+python3 backup_orchestrator.py --container postgres_container
+
+# Forzar entorno Docker
+python3 backup_orchestrator.py --force-docker
+```
+
+## Combinaciones de Comandos
+
+### Flujo de Desarrollo
+```bash
+# Backup antes de cambios importantes
+python3 backup_orchestrator.py --force-full --name "pre_changes"
+
+# Backup diario automático
+python3 backup_orchestrator.py
+
+# Limpieza semanal
+python3 backup_orchestrator.py --retention-dry-run
+python3 backup_orchestrator.py --apply-retention
+```
+
+### Flujo de Producción
+```bash
+# Configuración robusta
+python3 backup_orchestrator.py \
+  --retention-daily 30 \
+  --retention-weekly 12 \
+  --retention-monthly 24 \
+  --retention-full 12 \
+  --force-full \
+  --name "prod_$(date +%Y%m%d)"
+
+# Monitoreo regular
+python3 backup_orchestrator.py --backup-summary
+```
+
+### Mantenimiento
+```bash
+# Revisión completa del sistema
+python3 backup_orchestrator.py --backup-summary
+python3 backup_orchestrator.py --retention-dry-run
+python3 backup_orchestrator.py --apply-retention
+python3 backup_orchestrator.py --list
+```
+
+## Estructura de Archivos
+
+```
+backups/
+├── backup_20250630_143022_full.sql
+├── backup_20250701_020000_incremental.sql
+└── .metadata/
+    ├── backup_state.json
+    ├── backup_20250630_143022_full.json
+    └── backup_20250701_020000_incremental.json
+```
+
+## Configuración de Base de Datos
+
+El sistema utiliza automáticamente:
+- Database: `pc_db`
+- Usuario: `postgres`
+- Password: `12345`
+- Detección automática de pod `postgres-0` con label `app=postgres`
+
+
 ## Githooks
 
 Para este proyecto estaremos utilizando githooks para validar commits y push, para poder tenerlo activo localmente usa el siguiente comando
