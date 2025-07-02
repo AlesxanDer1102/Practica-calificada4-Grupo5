@@ -83,7 +83,7 @@ class DockerHandler:
         print("-" * 80)
 
         for i, container in enumerate(containers, 1):
-            status_color = "🟢" if "Up" in container["status"] else "🔴"
+            status_color = "🟢" if "Up" in container["status"] else ""
             print(f"  {i}. {container['name']} {status_color}")
             print(f"     ID: {container['id'][:12]}")
             print(f"     Imagen: {container['image']}")

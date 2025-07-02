@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 # Cargar variables de entorno desde .env
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass  # python-dotenv no disponible, usar variables de entorno normales
@@ -83,11 +84,11 @@ class UnifiedBackupOrchestrator:
         """
         # Gestor de notificaciones
         self.notification_manager = NotificationManager(str(self.backup_dir))
-        
+
         # Gestor de cron local (Docker)
         script_path = Path(__file__).absolute()
         self.cron_manager = CronManager(str(script_path))
-        
+
         # Gestor de CronJobs Kubernetes
         self.k8s_cronjob_manager = K8sCronJobManager(namespace=self.config.namespace)
 
@@ -533,18 +534,24 @@ class UnifiedBackupOrchestrator:
                     self._print_message("INFO", f"Ubicación: {backup_path.absolute()}")
 
                 # Enviar notificación si está configurado
-                if (hasattr(self.config, 'notification_email') and self.config.notification_email) or \
-                   (hasattr(self.config, 'slack_token') and self.config.slack_token and 
-                    hasattr(self.config, 'slack_channel') and self.config.slack_channel):
+                if (
+                    hasattr(self.config, "notification_email")
+                    and self.config.notification_email
+                ) or (
+                    hasattr(self.config, "slack_token")
+                    and self.config.slack_token
+                    and hasattr(self.config, "slack_channel")
+                    and self.config.slack_channel
+                ):
                     self.notification_manager.notify_backup_status(
                         success=True,
                         backup_name=backup_filename,
                         environment=self.environment.value,
                         target=target,
-                        email=getattr(self.config, 'notification_email', None),
-                        slack_token=getattr(self.config, 'slack_token', None),
-                        slack_channel=getattr(self.config, 'slack_channel', None),
-                        details=f"Tipo: {backup_type.upper()}, Tamaño: {format_file_size(file_size)}, Duración: {duration:.1f}s"
+                        email=getattr(self.config, "notification_email", None),
+                        slack_token=getattr(self.config, "slack_token", None),
+                        slack_channel=getattr(self.config, "slack_channel", None),
+                        details=f"Tipo: {backup_type.upper()}, Tamaño: {format_file_size(file_size)}, Duración: {duration:.1f}s",
                     )
 
                 return True
@@ -555,18 +562,24 @@ class UnifiedBackupOrchestrator:
                 self._print_message("ERROR", f"pg_dump falló: {result.stderr.strip()}")
 
                 # Enviar notificación de fallo si está configurado
-                if (hasattr(self.config, 'notification_email') and self.config.notification_email) or \
-                   (hasattr(self.config, 'slack_token') and self.config.slack_token and 
-                    hasattr(self.config, 'slack_channel') and self.config.slack_channel):
+                if (
+                    hasattr(self.config, "notification_email")
+                    and self.config.notification_email
+                ) or (
+                    hasattr(self.config, "slack_token")
+                    and self.config.slack_token
+                    and hasattr(self.config, "slack_channel")
+                    and self.config.slack_channel
+                ):
                     self.notification_manager.notify_backup_status(
                         success=False,
                         backup_name=backup_filename,
                         environment=self.environment.value,
                         target=target,
-                        email=getattr(self.config, 'notification_email', None),
-                        slack_token=getattr(self.config, 'slack_token', None),
-                        slack_channel=getattr(self.config, 'slack_channel', None),
-                        details=f"Error en pg_dump: {result.stderr.strip()}"
+                        email=getattr(self.config, "notification_email", None),
+                        slack_token=getattr(self.config, "slack_token", None),
+                        slack_channel=getattr(self.config, "slack_channel", None),
+                        details=f"Error en pg_dump: {result.stderr.strip()}",
                     )
 
                 if backup_path.exists():
@@ -580,18 +593,28 @@ class UnifiedBackupOrchestrator:
             self._print_message("ERROR", f"Error inesperado: {e}")
 
             # Enviar notificación de error si está configurado
-            if (hasattr(self.config, 'notification_email') and self.config.notification_email) or \
-               (hasattr(self.config, 'slack_token') and self.config.slack_token and 
-                hasattr(self.config, 'slack_channel') and self.config.slack_channel):
+            if (
+                hasattr(self.config, "notification_email")
+                and self.config.notification_email
+            ) or (
+                hasattr(self.config, "slack_token")
+                and self.config.slack_token
+                and hasattr(self.config, "slack_channel")
+                and self.config.slack_channel
+            ):
                 self.notification_manager.notify_backup_status(
                     success=False,
-                    backup_name=backup_filename if 'backup_filename' in locals() else "backup_unknown",
+                    backup_name=(
+                        backup_filename
+                        if "backup_filename" in locals()
+                        else "backup_unknown"
+                    ),
                     environment=self.environment.value,
-                    target=target if 'target' in locals() else "unknown",
-                    email=getattr(self.config, 'notification_email', None),
-                    slack_token=getattr(self.config, 'slack_token', None),
-                    slack_channel=getattr(self.config, 'slack_channel', None),
-                    details=f"Error inesperado: {str(e)}"
+                    target=target if "target" in locals() else "unknown",
+                    email=getattr(self.config, "notification_email", None),
+                    slack_token=getattr(self.config, "slack_token", None),
+                    slack_channel=getattr(self.config, "slack_channel", None),
+                    details=f"Error inesperado: {str(e)}",
                 )
 
             if backup_path.exists():
@@ -742,7 +765,9 @@ class UnifiedBackupOrchestrator:
         try:
             target = self._resolve_target()
             if not target:
-                self._print_message("ERROR", "No se pudo resolver el objetivo del backup")
+                self._print_message(
+                    "ERROR", "No se pudo resolver el objetivo del backup"
+                )
                 return False
 
             if self.environment == Environment.DOCKER:
@@ -818,11 +843,13 @@ class UnifiedBackupOrchestrator:
         """
         Prueba el sistema de notificaciones
         """
-        email = getattr(self.config, 'notification_email', None)
-        slack_token = getattr(self.config, 'slack_token', None)
-        slack_channel = getattr(self.config, 'slack_channel', None)
+        email = getattr(self.config, "notification_email", None)
+        slack_token = getattr(self.config, "slack_token", None)
+        slack_channel = getattr(self.config, "slack_channel", None)
         environment = self.environment.value  # docker o kubernetes
-        return self.notification_manager.test_notification_system(email, slack_token, slack_channel, environment)
+        return self.notification_manager.test_notification_system(
+            email, slack_token, slack_channel, environment
+        )
 
 
 def display_backup_list(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
@@ -911,13 +938,13 @@ def handle_backup_strategy_commands(
         # Obtener resumen de retención
         summary = backup_strategy.get_retention_summary()
 
-        print(f"\n📊 POLÍTICAS DE RETENCIÓN")
+        print(f"\n POLÍTICAS DE RETENCIÓN")
         print("-" * 40)
         for category, count in summary["policies"].items():
             current = summary["current_counts"].get(category, 0)
             print(f"  {category.capitalize()}: {current}/{count} backups")
 
-        print(f"\n📈 ESTADÍSTICAS")
+        print(f"\n ESTADÍSTICAS")
         print("-" * 40)
         print(f"  Total de backups: {summary['total_backups']}")
         print(f"  Espacio utilizado: {summary['total_size_mb']} MB")
@@ -925,7 +952,7 @@ def handle_backup_strategy_commands(
         # Mostrar backups por tipo
         backups_by_type = backup_strategy.list_backups_by_type()
 
-        print(f"\n📋 BACKUPS POR TIPO")
+        print(f"\n BACKUPS POR TIPO")
         print("-" * 40)
         for backup_type, backups in backups_by_type.items():
             if backups:
@@ -941,7 +968,7 @@ def handle_backup_strategy_commands(
 
         # Mostrar recomendación para próximo backup
         recommendation = backup_strategy.get_next_backup_recommendation()
-        print(f"\n💡 PRÓXIMO BACKUP RECOMENDADO")
+        print(f"\n PRÓXIMO BACKUP RECOMENDADO")
         print("-" * 40)
         print(f"  Tipo: {recommendation['type'].upper()}")
         print(f"  Razón: {recommendation['reason']}")
@@ -966,7 +993,7 @@ def handle_backup_strategy_commands(
                 use_colors,
             )
         else:
-            print(f"\n🗑️  BACKUPS {'A ELIMINAR' if dry_run else 'ELIMINADOS'}")
+            print(f"\n️  BACKUPS {'A ELIMINAR' if dry_run else 'ELIMINADOS'}")
             print("-" * 40)
             for category, count in deleted_counts.items():
                 if count > 0:
@@ -1027,7 +1054,11 @@ def main():
                 predefined = CronManager.get_predefined_schedules()
                 schedule_str = predefined.get(config.schedule)
                 if not schedule_str:
-                    print_colored_message("ERROR", f"Programación predefinida inválida: {config.schedule}", use_colors)
+                    print_colored_message(
+                        "ERROR",
+                        f"Programación predefinida inválida: {config.schedule}",
+                        use_colors,
+                    )
                     return 1
             elif config.schedule_custom:
                 schedule_str = config.schedule_custom
@@ -1035,7 +1066,7 @@ def main():
             success = orchestrator.schedule_automatic_backup(
                 schedule=schedule_str,
                 backup_name=config.schedule_prefix,
-                notification_email=config.notification_email
+                notification_email=config.notification_email,
             )
             return 0 if success else 1
 

@@ -9,16 +9,16 @@
 
 Una herramienta robusta y flexible que automatiza la copia de seguridad y restauración de bases de datos PostgreSQL en contenedores Docker y pods Kubernetes, con estrategias inteligentes de backup y políticas de retención configurables.
 
-## 🚀 Características Principales
+##  Características Principales
 
-- **🎯 Multi-Entorno**: Soporte nativo para Docker y Kubernetes con detección automática
-- **🧠 Estrategias Inteligentes**: Backup completo e incremental con decisión automática
-- **📅 Políticas de Retención**: Gestión automática por categorías (daily, weekly, monthly, full)
-- **🔒 Seguridad**: Validación de integridad y confirmación obligatoria para restauraciones
-- **⚡ CLI Intuitiva**: Interfaz de línea de comandos con colores y progreso visual
-- **🔧 Extensible**: Arquitectura modular preparada para nuevos entornos y estrategias
+- ** Multi-Entorno**: Soporte nativo para Docker y Kubernetes con detección automática
+- ** Estrategias Inteligentes**: Backup completo e incremental con decisión automática
+- ** Políticas de Retención**: Gestión automática por categorías (daily, weekly, monthly, full)
+- ** Seguridad**: Validación de integridad y confirmación obligatoria para restauraciones
+- ** CLI Intuitiva**: Interfaz de línea de comandos con colores y progreso visual
+- ** Extensible**: Arquitectura modular preparada para nuevos entornos y estrategias
 
-## 📋 Inicio Rápido
+##  Inicio Rápido
 
 ### Prerrequisitos
 
@@ -58,29 +58,29 @@ python3 backup_orchestrator.py --list
 python3 backup_orchestrator.py --restore
 ```
 
-## 🏗️ Arquitectura del Sistema
+## ️ Arquitectura del Sistema
 
 ```mermaid
 graph TB
-    subgraph "🏗️ Infrastructure Layer"
+    subgraph "️ Infrastructure Layer"
         Docker[Docker Engine]
         K8s[Kubernetes Cluster]
         Storage[Persistent Storage]
     end
     
-    subgraph "🖥️ Application Layer"
+    subgraph "️ Application Layer"
         WebApp[Flask Web App]
         CLI[CLI Interface]
         Database[(PostgreSQL)]
     end
     
-    subgraph "🎛️ Orchestration Layer"
+    subgraph "️ Orchestration Layer"
         Orchestrator[Backup Orchestrator]
         Strategy[Backup Strategy Engine]
         Handlers[Environment Handlers]
     end
     
-    subgraph "⚙️ Management Layer"
+    subgraph "️ Management Layer"
         Detector[Environment Detector]
         Validator[File Validator]
         Progress[Progress Monitor]
@@ -103,16 +103,16 @@ graph TB
     Database --> Storage
 ```
 
-## 📚 Documentación Completa
+##  Documentación Completa
 
-### 📖 Guías Principales
+###  Guías Principales
 
-- **[🏗️ Arquitectura del Sistema](docs/architecture.md)** - Diagramas y patrones de diseño
-- **[📖 Referencia de APIs y Comandos](docs/api-reference.md)** - Documentación completa de comandos
-- **[👤 Guía de Usuario](docs/user-guide.md)** - Ejemplos prácticos y casos de uso
-- **[⚖️ Docker vs Kubernetes](docs/docker-vs-kubernetes.md)** - Comparación detallada de entornos
+- **[️ Arquitectura del Sistema](docs/architecture.md)** - Diagramas y patrones de diseño
+- **[ Referencia de APIs y Comandos](docs/api-reference.md)** - Documentación completa de comandos
+- **[ Guía de Usuario](docs/user-guide.md)** - Ejemplos prácticos y casos de uso
+- **[️ Docker vs Kubernetes](docs/docker-vs-kubernetes.md)** - Comparación detallada de entornos
 
-### 🚦 Enlaces Rápidos
+###  Enlaces Rápidos
 
 - [Instalación y Configuración](#configuración-del-entorno)
 - [Comandos Básicos](#comandos-principales)
@@ -120,7 +120,7 @@ graph TB
 - [Políticas de Retención](#políticas-de-retención)
 - [Resolución de Problemas](#resolución-de-problemas)
 
-## 🎯 Estrategias de Backup
+##  Estrategias de Backup
 
 ### Backup Inteligente (Recomendado)
 
@@ -146,7 +146,7 @@ python3 backup_orchestrator.py --backup-type incremental
 python3 backup_orchestrator.py --force-full --name "pre_migration"
 ```
 
-## 📅 Políticas de Retención
+##  Políticas de Retención
 
 ### Configuración por Defecto
 
@@ -171,7 +171,7 @@ python3 backup_orchestrator.py \
 python3 backup_orchestrator.py --apply-retention
 ```
 
-## 🕒 Programación Automática de Backups
+##  Programación Automática de Backups
 
 ### Configuración de Cron (Docker)
 
@@ -238,10 +238,10 @@ python3 backup_orchestrator.py --test-notifications
 **Componentes**:
 - `BackupLogger`: Archivos de log y estado JSON
 - `EmailNotifier`: Envío via sendmail local  
-- `SlackNotifier`: Mensajes con emojis específicos (🐳 Docker, ☸️ K8s)
+- `SlackNotifier`: Mensajes con emojis específicos ( Docker, ️ K8s)
 - `NotificationFactory`: Crea notificadores según configuración
 
-## 🌍 Soporte Multi-Entorno
+##  Soporte Multi-Entorno
 
 ### Docker
 
@@ -266,7 +266,7 @@ for ns in dev staging prod; do
 done
 ```
 
-## 🔧 Configuración del Entorno
+##  Configuración del Entorno
 
 ### Variables de Entorno
 
@@ -306,7 +306,7 @@ volumes:
   postgres_data:
 ```
 
-## 📋 Comandos Principales
+##  Comandos Principales
 
 ### Operaciones de Backup
 
@@ -352,7 +352,7 @@ python3 backup_orchestrator.py \
 python3 backup_orchestrator.py --restore --quiet
 ```
 
-## 🔬 Aplicación de Demostración
+##  Aplicación de Demostración
 
 El proyecto incluye una aplicación Flask de demostración que implementa un sistema CRUD básico:
 
@@ -417,7 +417,7 @@ pytest tests/test_integration_* -v
 - **Tests**: 112/113 passing (99.1% success rate)
 - **Componentes**: Todos los módulos principales cubiertos
 
-## 🔍 Resolución de Problemas
+##  Resolución de Problemas
 
 ### Errores Comunes
 
@@ -464,7 +464,7 @@ docker logs postgres_container
 python3 backup_orchestrator.py --info
 ```
 
-## 🤝 Contribución
+##  Contribución
 
 ### Desarrollo
 
@@ -491,11 +491,11 @@ flake8 .
 - **Nuevas Estrategias**: Extender `BackupStrategy`
 - **Nuevas Interfaces**: Utilizar `UnifiedBackupOrchestrator` existente
 
-## 📄 Licencia
+##  Licencia
 
 Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
 
-## 🙋 Soporte
+##  Soporte
 
 - **Documentación**: Ver [docs/](docs/) para guías detalladas
 - **Issues**: [GitHub Issues](https://github.com/AlesxanDer1102/Practica-calificada4-Grupo5/issues)
@@ -503,4 +503,4 @@ Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ---
 
-**Desarrollado con ❤️ para simplificar las operaciones de backup en entornos containerizados**
+**Desarrollado con ️ para simplificar las operaciones de backup en entornos containerizados**

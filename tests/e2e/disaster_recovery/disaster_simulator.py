@@ -5,7 +5,7 @@ Simulador de desastres para tests E2E
 import subprocess
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any, Dict
 
 import docker
 from kubernetes import client, config
@@ -38,12 +38,14 @@ class DisasterSimulator(ABC):
         """
         Registra evento de desastre
         """
-        self.disaster_log.append({
-            "type": disaster_type,
-            "target": target,
-            "timestamp": timestamp,
-            "environment": self.environment
-        })
+        self.disaster_log.append(
+            {
+                "type": disaster_type,
+                "target": target,
+                "timestamp": timestamp,
+                "environment": self.environment,
+            }
+        )
 
     def get_disaster_summary(self) -> Dict[str, Any]:
         """
@@ -52,5 +54,5 @@ class DisasterSimulator(ABC):
         return {
             "total_disasters": len(self.disaster_log),
             "disasters": self.disaster_log,
-            "environment": self.environment
-        } 
+            "environment": self.environment,
+        }

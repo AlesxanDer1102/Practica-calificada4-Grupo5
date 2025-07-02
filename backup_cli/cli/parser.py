@@ -338,13 +338,16 @@ class CLIConfig:
         self.schedule_custom = args.schedule_custom
         self.schedule_prefix = args.schedule_prefix
         self.retention_days = args.retention_days
-        
+
         # Usar valores de .env como fallback si no se especificaron argumentos
         import os
-        self.notification_email = args.notification_email or os.getenv('NOTIFICATION_EMAIL')
-        self.slack_token = args.slack_token or os.getenv('SLACK_BOT_TOKEN')
-        self.slack_channel = args.slack_channel or os.getenv('SLACK_DEFAULT_CHANNEL')
-        
+
+        self.notification_email = args.notification_email or os.getenv(
+            "NOTIFICATION_EMAIL"
+        )
+        self.slack_token = args.slack_token or os.getenv("SLACK_BOT_TOKEN")
+        self.slack_channel = args.slack_channel or os.getenv("SLACK_DEFAULT_CHANNEL")
+
         self.list_schedules = args.list_schedules
         self.remove_schedule = args.remove_schedule
         self.test_notifications = args.test_notifications

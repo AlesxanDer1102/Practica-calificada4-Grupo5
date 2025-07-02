@@ -48,7 +48,9 @@ class CronManager:
             if backup_name:
                 cmd_parts.extend(["--name", f"{backup_name}_$(date +%Y%m%d_%H%M)"])
             else:
-                cmd_parts.extend(["--name", f"{self.backup_prefix}_$(date +%Y%m%d_%H%M)"])
+                cmd_parts.extend(
+                    ["--name", f"{self.backup_prefix}_$(date +%Y%m%d_%H%M)"]
+                )
 
             # Agregar logging
             log_file = self.script_path.parent / "backups" / "scheduled_backups.log"
@@ -105,7 +107,9 @@ class CronManager:
                 print_colored_message("SUCCESS", "Backup programado exitosamente")
                 return True
             else:
-                print_colored_message("ERROR", f"Error configurando cron: {result.stderr}")
+                print_colored_message(
+                    "ERROR", f"Error configurando cron: {result.stderr}"
+                )
                 return False
 
         except Exception as e:
@@ -173,7 +177,9 @@ class CronManager:
                 print_colored_message("SUCCESS", "Programación eliminada")
                 return True
             else:
-                print_colored_message("ERROR", f"Error eliminando programación: {result.stderr}")
+                print_colored_message(
+                    "ERROR", f"Error eliminando programación: {result.stderr}"
+                )
                 return False
 
         except Exception as e:
@@ -191,4 +197,4 @@ class CronManager:
             "weekly": "0 2 * * 0",  # Semanal los domingos a las 2 AM
             "monthly": "0 2 1 * *",  # Mensual el día 1 a las 2 AM
             "workdays": "0 2 * * 1-5",  # Días laborables a las 2 AM
-        } 
+        }
