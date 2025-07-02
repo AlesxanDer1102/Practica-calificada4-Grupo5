@@ -9,11 +9,11 @@ from typing import Any, Dict
 import pytest
 
 from tests.e2e.disaster_recovery import (
+    VolumeDestroyer,
     DataCorruptor,
     FullRecoveryTest,
-    RTOAnalyzer,
     RTOMonitor,
-    VolumeDestroyer,
+    RTOAnalyzer,
 )
 
 

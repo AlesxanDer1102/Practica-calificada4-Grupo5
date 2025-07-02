@@ -95,9 +95,9 @@ class FullRecoveryTest:
                     "-U",
                     "postgres",
                     "-d",
-                    "test_db",
+                    "pc_db",
                     "-c",
-                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';",
+                    "SELECT COUNT(*) FROM usuarios;",
                 ]
             else:
                 cmd = [
@@ -109,9 +109,9 @@ class FullRecoveryTest:
                     "-U",
                     "postgres",
                     "-d",
-                    "test_db",
+                    "pc_db",
                     "-c",
-                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';",
+                    "SELECT COUNT(*) FROM usuarios;",
                 ]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -127,7 +127,7 @@ class FullRecoveryTest:
 
             return {
                 "record_count": record_count,
-                "tables": ["information_schema"],
+                "tables": ["usuarios", "productos", "pedidos"],
                 "timestamp": time.time(),
             }
 
@@ -147,32 +147,24 @@ class FullRecoveryTest:
             backup_name = f"disaster_test_baseline_{int(time.time())}"
 
             if self.environment == "docker":
-                # En lugar de usar backup_orchestrator, usar pg_dump directamente
                 cmd = [
-                    "docker",
-                    "exec",
+                    "python3",
+                    self.backup_orchestrator_path,
+                    "--force-docker",
+                    "--name",
+                    backup_name,
+                    "--container",
                     target,
-                    "pg_dump",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    "test_db",
-                    "-f",
-                    f"/tmp/{backup_name}.sql",
                 ]
             else:
                 cmd = [
-                    "kubectl",
-                    "exec",
+                    "python3",
+                    self.backup_orchestrator_path,
+                    "--force-kubernetes",
+                    "--name",
+                    backup_name,
+                    "--pod",
                     target,
-                    "--",
-                    "pg_dump",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    "test_db",
-                    "-f",
-                    f"/tmp/{backup_name}.sql",
                 ]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
@@ -209,32 +201,26 @@ class FullRecoveryTest:
         """
         try:
             if self.environment == "docker":
-                # Usar psql para restaurar directamente
                 cmd = [
-                    "docker",
-                    "exec",
+                    "python3",
+                    self.backup_orchestrator_path,
+                    "--restore",
+                    "--restore-file",
+                    f"backups/{backup_name}.sql",
+                    "--force-docker",
+                    "--container",
                     target,
-                    "psql",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    "test_db",
-                    "-f",
-                    f"/tmp/{backup_name}.sql",
                 ]
             else:
                 cmd = [
-                    "kubectl",
-                    "exec",
+                    "python3",
+                    self.backup_orchestrator_path,
+                    "--restore",
+                    "--restore-file",
+                    f"backups/{backup_name}.sql",
+                    "--force-kubernetes",
+                    "--pod",
                     target,
-                    "--",
-                    "psql",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    "test_db",
-                    "-f",
-                    f"/tmp/{backup_name}.sql",
                 ]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -243,7 +229,6 @@ class FullRecoveryTest:
                 "success": result.returncode == 0,
                 "command_output": result.stdout,
                 "error": result.stderr if result.returncode != 0 else None,
-                "recovery_method": "direct_psql",
                 "timestamp": time.time(),
             }
 
