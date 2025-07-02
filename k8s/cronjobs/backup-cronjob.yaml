@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup-daily
+  namespace: default
+  labels:
+    app: backup-orchestrator
+    type: automated-backup
+spec:
+  schedule: "0 2 * * *"  # Diario a las 2 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: backup-orchestrator
+            type: backup-job
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-service-account
+          containers:
+            - name: backup-runner
+              image: postgres:15
+              command: ["/bin/bash"]
+              args:
+                - -c
+                - |
+                  # Script de backup automático
+                  set -e
+                  
+                  echo "Iniciando backup automático de PostgreSQL..."
+                  
+                  # Variables de configuración
+                  POSTGRES_HOST="postgres-0.postgres"
+                  POSTGRES_DB="pc_db"
+                  POSTGRES_USER="postgres"
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_NAME="auto_backup_${TIMESTAMP}.sql"
+                  
+                  # Crear backup usando pg_dump
+                  PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
+                    -h ${POSTGRES_HOST} \
+                    -U ${POSTGRES_USER} \
+                    -d ${POSTGRES_DB} \
+                    --clean --create --verbose \
+                    --file="/backups/${BACKUP_NAME}"
+                  
+                  if [ $? -eq 0 ]; then
+                    echo "Backup exitoso: ${BACKUP_NAME}"
+                    echo "Tamaño: $(du -h /backups/${BACKUP_NAME} | cut -f1)"
+                    
+                    # Escribir log de éxito
+                    echo "[$(date)] ÉXITO - ${BACKUP_NAME}" >> /backups/scheduled_backups.log
+                  else
+                    echo "ERROR: Falló el backup"
+                    echo "[$(date)] FALLO - ${BACKUP_NAME}" >> /backups/scheduled_backups.log
+                    exit 1
+                  fi
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-pvc 
