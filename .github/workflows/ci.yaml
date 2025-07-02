@@ -93,3 +93,21 @@ jobs:
         with:
           name: backups-${{github.run_id}}
           path: backups/*
+
+  deploy:
+    needs: [test, backup]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -f k8s/backend/Dockerfile -t miapp:dev .
+
+      - name: Fake docker push
+        run: echo "Pushing image to  Hub (simulacion para evitar fallos)"
+
+      - name: Deploy to Kubernetes
+        env:
+          KUBECONFIG: ${{secrets.KUBECONFIG}}
+        run: echo "kubectl apply -f k8s/backend""
