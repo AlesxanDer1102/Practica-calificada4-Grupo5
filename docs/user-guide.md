@@ -373,6 +373,119 @@ else
 fi
 ```
 
+## Programación Automática de Backups
+
+### Configuración de Cron (Docker)
+
+Para backups automáticos en entornos Docker:
+
+```bash
+# Backup diario a las 2 AM
+python3 backup_orchestrator.py --schedule daily --notification-email admin@empresa.com
+
+# Backup personalizado cada 6 horas
+python3 backup_orchestrator.py --schedule-custom "0 */6 * * *" --schedule-prefix "freq"
+
+# Ver programaciones activas
+python3 backup_orchestrator.py --list-schedules
+
+# Eliminar programación
+python3 backup_orchestrator.py --remove-schedule "daily"
+```
+
+### CronJobs de Kubernetes
+
+Para entornos Kubernetes usando CronJobs:
+
+```bash
+# Configurar RBAC (una sola vez)
+kubectl apply -f k8s/cronjobs/backup-pvc.yaml
+
+# Crear CronJob automático
+python3 backup_orchestrator.py --force-kubernetes --schedule weekly
+
+# Verificar CronJobs
+kubectl get cronjobs -l app=backup-orchestrator
+
+# Ver logs de ejecuciones
+kubectl logs job/backup-daily-xxxxx
+```
+
+### Frecuencias Disponibles
+
+```bash
+# Predefinidas
+--schedule hourly     # Cada hora
+--schedule daily      # Diario a las 2 AM
+--schedule weekly     # Domingos a las 2 AM
+--schedule monthly    # Día 1 de cada mes
+--schedule workdays   # Lunes a viernes
+
+# Personalizada (formato cron)
+--schedule-custom "0 */4 * * *"  # Cada 4 horas
+--schedule-custom "30 1 * * 1-5" # Lu-Vi a la 1:30 AM
+```
+
+### Sistema de Notificaciones (Arquitectura Refactorizada)
+
+**Componentes SRP**:
+- `BackupLogger`: Solo maneja logs y archivos de estado
+- `EmailNotifier`: Solo envía emails via sendmail
+- `SlackNotifier`: Solo maneja mensajes Slack con emojis por entorno
+- `NotificationFactory`: Solo crea instancias según configuración
+
+```bash
+# Email + Slack juntos
+python3 backup_orchestrator.py --schedule daily \
+  --notification-email admin@empresa.com \
+  --slack-token TOKEN \
+  --slack-channel "#backups"
+
+# Configurar .env para no repetir tokens
+echo 'SLACK_BOT_TOKEN=xoxb-tu-token' > .env
+echo 'SLACK_DEFAULT_CHANNEL=#general' >> .env
+
+# Usar configuración .env
+python3 backup_orchestrator.py --test-notifications
+
+# Ver logs estructurados
+tail -f backups/scheduled_backups.log
+cat backups/.metadata/last_status.json
+```
+
+**Slack setup rápido**:
+1. Crear bot en api.slack.com
+2. Obtener `Bot User OAuth Token` (xoxb-...)
+3. Invitar bot al canal deseado
+4. Configurar .env o usar flags CLI
+
+**Archivos del sistema**:
+- `backup_cli/scheduling/backup_logger.py` - Maneja logs y estado JSON
+- `backup_cli/scheduling/notifiers.py` - Clases EmailNotifier y SlackNotifier  
+- `backup_cli/scheduling/notification_factory.py` - Factory Pattern para crear notificadores
+- `backup_cli/scheduling/notifications.py` - Manager principal refactorizado
+
+### Ejemplo Completo: Configuración Empresarial
+
+```bash
+# Backup diario para producción
+python3 backup_orchestrator.py \
+  --schedule daily \
+  --schedule-prefix "prod_daily" \
+  --notification-email admin@empresa.com \
+  --retention-daily 7 \
+  --retention-weekly 4
+
+# Backup frecuente para desarrollo
+python3 backup_orchestrator.py \
+  --schedule-custom "0 */2 * * *" \
+  --schedule-prefix "dev_freq" \
+  --retention-daily 3
+
+# Verificar todas las programaciones
+python3 backup_orchestrator.py --list-schedules
+```
+
 ---
 
-**Nota**: Esta guía está basada en nuestra experiencia desarrollando el proyecto. Si encuentras algo que no funciona o tienes dudas, revisa los logs con `--verbose` o consulta la [documentación técnica](architecture.md). 
+**Nota**: Esta guía está basada en nuestra experiencia desarrollando el proyecto. Para programación automática, asegúrate de que `sendmail` esté configurado para notificaciones por email. Si encuentras algo que no funciona o tienes dudas, revisa los logs con `--verbose` o consulta la [documentación técnica](architecture.md). 

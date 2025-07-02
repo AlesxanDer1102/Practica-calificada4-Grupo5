@@ -243,6 +243,18 @@ Opciones generales:
     )
 
     schedule_group.add_argument(
+        "--slack-token",
+        type=str,
+        help="Token de bot de Slack para notificaciones (formato: xoxb-...)",
+    )
+
+    schedule_group.add_argument(
+        "--slack-channel",
+        type=str,
+        help="Canal de Slack para notificaciones (ej: #backups, @usuario, C1234567890)",
+    )
+
+    schedule_group.add_argument(
         "--list-schedules",
         action="store_true",
         help="Listar programaciones de backup existentes",
@@ -326,7 +338,13 @@ class CLIConfig:
         self.schedule_custom = args.schedule_custom
         self.schedule_prefix = args.schedule_prefix
         self.retention_days = args.retention_days
-        self.notification_email = args.notification_email
+        
+        # Usar valores de .env como fallback si no se especificaron argumentos
+        import os
+        self.notification_email = args.notification_email or os.getenv('NOTIFICATION_EMAIL')
+        self.slack_token = args.slack_token or os.getenv('SLACK_BOT_TOKEN')
+        self.slack_channel = args.slack_channel or os.getenv('SLACK_DEFAULT_CHANNEL')
+        
         self.list_schedules = args.list_schedules
         self.remove_schedule = args.remove_schedule
         self.test_notifications = args.test_notifications
