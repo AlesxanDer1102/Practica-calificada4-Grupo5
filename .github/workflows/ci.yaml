@@ -57,40 +57,40 @@ jobs:
           name: coverage-report
           path: htmlcov/
 
-emoji-check:
-  needs: test
-  runs-on: ubuntu-latest
+  emoji-check:
+    needs: test
+    runs-on: ubuntu-latest
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Detectar emojis en el repositorio
-      run: |
-        python3 - << 'EOF'
-        import sys, os, re
-        emoji_re = re.compile(
-            r'[\U0001F000-\U0001F02F'
-            r'\U0001F0A0-\U0001F0FF'
-            r'\U0001F100-\U0001F64F'
-            r'\U0001F680-\U0001F6FF'
-            r'\U0001F910-\U0001F96B'
-            r'\U0001F980-\U0001F9E0'
-            r'\u2600-\u26FF'
-            r'\u2700-\u27BF]', flags=re.UNICODE
-        )
-        found = False
-        for root, _, files in os.walk('.'):
-            if any(p in root for p in ['.git', 'venv', '.github']): continue
-            for f in files:
-                try:
-                    text = open(os.path.join(root,f), encoding='utf-8').read()
-                except: continue
-                if emoji_re.search(text):
-                    print(f"Emoji en: {os.path.join(root,f)}")
-                    found = True
-        if found: sys.exit(1)
-        print("No se encontraron emojis.")
-        EOF
+      - name: Detectar emojis en el repositorio
+        run: |
+          python3 - << 'EOF'
+          import sys, os, re
+          emoji_re = re.compile(
+              r'[\U0001F000-\U0001F02F'
+              r'\U0001F0A0-\U0001F0FF'
+              r'\U0001F100-\U0001F64F'
+              r'\U0001F680-\U0001F6FF'
+              r'\U0001F910-\U0001F96B'
+              r'\U0001F980-\U0001F9E0'
+              r'\u2600-\u26FF'
+              r'\u2700-\u27BF]', flags=re.UNICODE
+          )
+          found = False
+          for root, _, files in os.walk('.'):
+              if any(p in root for p in ['.git', 'venv', '.github']): continue
+              for f in files:
+                  try:
+                      text = open(os.path.join(root,f), encoding='utf-8').read()
+                  except: continue
+                  if emoji_re.search(text):
+                      print(f"Emoji en: {os.path.join(root,f)}")
+                      found = True
+          if found: sys.exit(1)
+          print("No se encontraron emojis.")
+          EOF
 
   backup:
     needs: test
