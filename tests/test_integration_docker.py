@@ -48,6 +48,7 @@ def create_docker_test_config(backup_dir, container_name="postgres_container"):
                 "apply_retention": False,
                 "retention_dry_run": False,
                 "backup_summary": False,
+                "apply_encryption": False,
                 "schedule": None,
                 "schedule_custom": None,
                 "schedule_prefix": "auto",
