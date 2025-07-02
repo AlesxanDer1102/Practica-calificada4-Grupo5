@@ -533,6 +533,9 @@ class UnifiedBackupOrchestrator:
                     self._print_message("INFO", f"Duración: {duration:.1f} segundos")
                     self._print_message("INFO", f"Ubicación: {backup_path.absolute()}")
 
+                if self.config.apply_encryption:
+                    self._encrypt_backup(backup_path)
+
                 # Enviar notificación si está configurado
                 if (
                     hasattr(self.config, "notification_email")
@@ -851,6 +854,37 @@ class UnifiedBackupOrchestrator:
             email, slack_token, slack_channel, environment
         )
 
+    def _encrypt_backup(self, backup_path: Path) -> bool:
+        """
+        Encripta un archivo backup usando OpenSSL
+        """
+        encryption_progress = ProgressIndicator(
+            f"Encriptando backup '{backup_path.name}'", self.config.use_colors
+        )
+        try:
+            if self.config.show_progress:
+                encryption_progress.start()
+            encrypted_path = self.handler._encrypt_backup(backup_path)
+
+            if self.config.show_progress:
+                encryption_progress.simulate_work()
+
+            if encrypted_path:
+                if self.config.show_progress:
+                    encryption_progress.complete(True)
+                self._print_message("INFO", f"Backup encriptado correctamente: {encrypted_path}")
+                return True
+            else:
+                if self.config.show_progress:
+                    encryption_progress.complete(False)
+                self._print_message("Error", f"Backup falló encriptación")
+                return False
+        except Exception as e:
+            if self.config.show_progress:
+                encryption_progress.complete(False)
+            self._print_message("Error", f"Error inesperado durante la encriptación {e}")
+            return False
+
 
 def display_backup_list(orchestrator: UnifiedBackupOrchestrator, use_colors: bool):
     """
@@ -1016,6 +1050,7 @@ def handle_backup_strategy_commands(
         return 0
 
     return 0
+
 
 
 def main():
