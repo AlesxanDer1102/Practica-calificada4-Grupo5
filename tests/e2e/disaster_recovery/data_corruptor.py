@@ -189,9 +189,7 @@ class DataCorruptor(DisasterSimulator):
                 tables = [
                     line.strip() for line in result.stdout.split("\n") if line.strip()
                 ]
-                return (
-                    tables if tables else ["pg_type", "pg_attribute", "pg_class"]
-                )
+                return tables if tables else ["pg_type", "pg_attribute", "pg_class"]
             else:
                 # Fallback con tablas por defecto del sistema
                 return ["pg_type", "pg_attribute", "pg_class"]

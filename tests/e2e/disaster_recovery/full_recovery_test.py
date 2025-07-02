@@ -153,9 +153,12 @@ class FullRecoveryTest:
                     "exec",
                     target,
                     "pg_dump",
-                    "-U", "postgres",
-                    "-d", "test_db",
-                    "-f", f"/tmp/{backup_name}.sql"
+                    "-U",
+                    "postgres",
+                    "-d",
+                    "test_db",
+                    "-f",
+                    f"/tmp/{backup_name}.sql",
                 ]
             else:
                 cmd = [
@@ -164,9 +167,12 @@ class FullRecoveryTest:
                     target,
                     "--",
                     "pg_dump",
-                    "-U", "postgres", 
-                    "-d", "test_db",
-                    "-f", f"/tmp/{backup_name}.sql"
+                    "-U",
+                    "postgres",
+                    "-d",
+                    "test_db",
+                    "-f",
+                    f"/tmp/{backup_name}.sql",
                 ]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
@@ -209,9 +215,12 @@ class FullRecoveryTest:
                     "exec",
                     target,
                     "psql",
-                    "-U", "postgres",
-                    "-d", "test_db",
-                    "-f", f"/tmp/{backup_name}.sql"
+                    "-U",
+                    "postgres",
+                    "-d",
+                    "test_db",
+                    "-f",
+                    f"/tmp/{backup_name}.sql",
                 ]
             else:
                 cmd = [
@@ -220,9 +229,12 @@ class FullRecoveryTest:
                     target,
                     "--",
                     "psql",
-                    "-U", "postgres",
-                    "-d", "test_db", 
-                    "-f", f"/tmp/{backup_name}.sql"
+                    "-U",
+                    "postgres",
+                    "-d",
+                    "test_db",
+                    "-f",
+                    f"/tmp/{backup_name}.sql",
                 ]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)

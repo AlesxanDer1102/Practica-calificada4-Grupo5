@@ -124,7 +124,10 @@ spec:
                     capture_output=True,
                     timeout=10,
                 )
-                if ready_result.returncode == 0 and ready_result.stdout.decode().strip() == "true":
+                if (
+                    ready_result.returncode == 0
+                    and ready_result.stdout.decode().strip() == "true"
+                ):
                     # Dar tiempo adicional para que PostgreSQL esté completamente listo
                     time.sleep(10)
                     break
@@ -274,7 +277,7 @@ spec:
             timeout=10,
         )
         initial_phase = result.stdout.decode().strip()
-        
+
         # Si el pod no está corriendo, puede ser que haya sido reiniciado por otros tests
         # En este caso, esperamos un poco y verificamos si llega a Running
         if initial_phase != "Running":
@@ -294,7 +297,7 @@ spec:
                 timeout=10,
             )
             initial_phase = result.stdout.decode().strip()
-        
+
         # Si sigue sin estar corriendo, el test sigue siendo válido para probar resiliencia
         # Simular eliminación de pod (kubernetes lo recrea automáticamente si es deployment)
         destroyer = VolumeDestroyer("kubernetes")
@@ -363,16 +366,25 @@ spec:
 
         # Verificar primero que el pod existe y está ready
         pod_check = subprocess.run(
-            ["kubectl", "get", "pod", pod_name, "-n", namespace, "-o", "jsonpath={.status.phase}"],
+            [
+                "kubectl",
+                "get",
+                "pod",
+                pod_name,
+                "-n",
+                namespace,
+                "-o",
+                "jsonpath={.status.phase}",
+            ],
             capture_output=True,
             timeout=10,
         )
-        
+
         if pod_check.returncode != 0 or pod_check.stdout.decode().strip() != "Running":
             # Si el pod no está disponible, intentar recrearlo o skip
             pytest.skip(f"Pod {pod_name} no está disponible para test de conectividad")
 
-        # Test de conectividad básica  
+        # Test de conectividad básica
         result = subprocess.run(
             ["kubectl", "exec", pod_name, "-n", namespace, "--", "echo", "test"],
             capture_output=True,
