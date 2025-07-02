@@ -210,7 +210,7 @@ Opciones generales:
     backup_group.add_argument(
         "--apply-encryption",
         action="store_true",
-        help="Aplica encriptación a los backups creados"
+        help="Aplica encriptación a los backups creados",
     )
 
     # Opciones de programación automática

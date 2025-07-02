@@ -200,7 +200,9 @@ class DockerHandler:
         """
         Encriptar usando OpenSSL
         """
-        password_file = os.getenv('ENCRYPTION_PASSWORD_FILE', './scripts/secure/backup_key.txt')
+        password_file = os.getenv(
+            "ENCRYPTION_PASSWORD_FILE", "./scripts/secure/backup_key.txt"
+        )
         encrypted_path = f"{backup_path}.enc"
 
         if not os.path.exists(password_file):
@@ -208,11 +210,19 @@ class DockerHandler:
             return None
 
         comando = [
-            "openssl", "enc", "-aes-256-cbc",
-            "-salt", "-pbkdf2", "-iter", "100000",
-            "-in", backup_path,
-            "-out", encrypted_path,
-            "-pass", f'file:{password_file}'
+            "openssl",
+            "enc",
+            "-aes-256-cbc",
+            "-salt",
+            "-pbkdf2",
+            "-iter",
+            "100000",
+            "-in",
+            backup_path,
+            "-out",
+            encrypted_path,
+            "-pass",
+            f"file:{password_file}",
         ]
 
         result = subprocess.run(comando, capture_output=True, text=True)

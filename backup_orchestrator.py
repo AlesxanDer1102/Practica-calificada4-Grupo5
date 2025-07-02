@@ -872,7 +872,9 @@ class UnifiedBackupOrchestrator:
             if encrypted_path:
                 if self.config.show_progress:
                     encryption_progress.complete(True)
-                self._print_message("INFO", f"Backup encriptado correctamente: {encrypted_path}")
+                self._print_message(
+                    "INFO", f"Backup encriptado correctamente: {encrypted_path}"
+                )
                 return True
             else:
                 if self.config.show_progress:
@@ -882,7 +884,9 @@ class UnifiedBackupOrchestrator:
         except Exception as e:
             if self.config.show_progress:
                 encryption_progress.complete(False)
-            self._print_message("Error", f"Error inesperado durante la encriptación {e}")
+            self._print_message(
+                "Error", f"Error inesperado durante la encriptación {e}"
+            )
             return False
 
 
@@ -1050,7 +1054,6 @@ def handle_backup_strategy_commands(
         return 0
 
     return 0
-
 
 
 def main():

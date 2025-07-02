@@ -283,24 +283,35 @@ class KubernetesHandler:
             self.logger.error(f"Error al copiar archivo desde pod: {e}")
             return False
 
-
     def _encrypt_backup(self, backup_path):
         """
         Encriptar usando OpenSSL
         """
-        password_file = os.getenv('ENCRYPTION_PASSWORD_FILE', './scripts/secure/backup_key.txt')
+        password_file = os.getenv(
+            "ENCRYPTION_PASSWORD_FILE", "./scripts/secure/backup_key.txt"
+        )
         encrypted_path = f"{backup_path}.enc"
 
         if not os.path.exists(password_file):
-            self.logger.error(f"No se encontro un archivo de contraseña en {password_file}")
+            self.logger.error(
+                f"No se encontro un archivo de contraseña en {password_file}"
+            )
             return None
 
         comando = [
-            "openssl", "enc", "-aes-256-cbc",
-            "-salt", "-pbkdf2", "-iter", "100000",
-            "-in", backup_path,
-            "-out", encrypted_path,
-            "-pass", f'file:{password_file}'
+            "openssl",
+            "enc",
+            "-aes-256-cbc",
+            "-salt",
+            "-pbkdf2",
+            "-iter",
+            "100000",
+            "-in",
+            backup_path,
+            "-out",
+            encrypted_path,
+            "-pass",
+            f"file:{password_file}",
         ]
 
         try:
