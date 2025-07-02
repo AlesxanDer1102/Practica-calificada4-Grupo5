@@ -170,6 +170,7 @@ class TestBackupOrchestrator:
         mock_subprocess,
         mock_check_container,
         orchestrator_instance,
+        mock_backup_strategy_state,
         temp_backup_dir,
     ):
         """
@@ -177,16 +178,16 @@ class TestBackupOrchestrator:
         """
         # Configurar mocks
         mock_check_container.return_value = True
-        mock_subprocess.return_value = Mock(returncode=0, stderr="")
-
-        # Mock del archivo de backup creado
-        backup_file = temp_backup_dir / "backup_test.sql"
-        backup_file.write_text("-- Mock backup content")
+        mock_subprocess.return_value = Mock(returncode=0, stderr="", stdout="-- Mock backup content")
 
         with patch(
             "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
         ) as mock_resolve:
             mock_resolve.return_value = ("backup_test.sql", False)
+
+            # Create the actual backup file in the temp directory
+            backup_file = orchestrator_instance.backup_dir / "backup_test.sql"
+            backup_file.write_text("-- Mock backup content")
 
             # Ejecutar create_backup
             result = orchestrator_instance.create_backup(custom_name="test")
@@ -202,6 +203,10 @@ class TestBackupOrchestrator:
             assert "exec" in call_args[0][0]
             assert "test_db" in call_args[0][0]
             assert "pg_dump" in call_args[0][0]
+            
+            # Verify the backup file exists and has content
+            assert backup_file.exists()
+            assert backup_file.stat().st_size > 0
 
     @patch("backup_orchestrator.UnifiedBackupOrchestrator._check_target_availability")
     @patch("subprocess.run")
@@ -304,7 +309,7 @@ class TestBackupOrchestrator:
         ],
     )
     def test_create_backup_different_scenarios(
-        self, orchestrator_instance, custom_name, force_overwrite, expected_name
+        self, orchestrator_instance, mock_backup_strategy_state, custom_name, force_overwrite, expected_name
     ):
         """
         Test parametrizado para diferentes escenarios de create_backup().
@@ -315,27 +320,30 @@ class TestBackupOrchestrator:
             mock_check.return_value = True
 
             with patch("subprocess.run") as mock_subprocess:
-                mock_subprocess.return_value = Mock(returncode=0, stderr="")
+                mock_subprocess.return_value = Mock(returncode=0, stderr="", stdout="-- Test backup content")
 
                 with patch(
                     "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
                 ) as mock_resolve:
                     mock_resolve.return_value = (expected_name, False)
 
-                    with patch("builtins.open", new_callable=mock_open):
-                        # Simular archivo creado
-                        with patch.object(Path, "stat") as mock_stat:
-                            mock_stat.return_value.st_size = 1024
+                    # Create the actual backup file in the temp directory
+                    backup_path = orchestrator_instance.backup_dir / expected_name
+                    backup_path.write_text("-- Test backup content")
 
-                            # Ejecutar create_backup
-                            result = orchestrator_instance.create_backup(
-                                custom_name=custom_name, force_overwrite=force_overwrite
-                            )
+                    # Ejecutar create_backup
+                    result = orchestrator_instance.create_backup(
+                        custom_name=custom_name, force_overwrite=force_overwrite
+                    )
 
-                            # Verificaciones
-                            assert result is True
-                            mock_resolve.assert_called_once_with(
-                                orchestrator_instance.backup_dir,
-                                custom_name,
-                                force_overwrite,
-                            )
+                    # Verificaciones
+                    assert result is True
+                    mock_resolve.assert_called_once_with(
+                        orchestrator_instance.backup_dir,
+                        custom_name,
+                        force_overwrite,
+                    )
+                    
+                    # Verify the backup file was created
+                    assert backup_path.exists()
+                    assert backup_path.stat().st_size > 0

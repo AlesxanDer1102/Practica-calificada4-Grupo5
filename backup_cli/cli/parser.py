@@ -207,6 +207,12 @@ Opciones generales:
         help="Mostrar resumen de backups y políticas de retención",
     )
 
+    backup_group.add_argument(
+        "--apply-encryption",
+        action="store_true",
+        help="Aplicar encriptación a los backups creados",
+    )
+
     # Opciones de programación automática
     schedule_group = parser.add_argument_group("Programación de backups automáticos")
     schedule_group.add_argument(
@@ -477,6 +483,7 @@ class CLIConfig:
         self.apply_retention = args.apply_retention
         self.retention_dry_run = args.retention_dry_run
         self.backup_summary = args.backup_summary
+        self.apply_encryption = args.apply_encryption
 
         # Opciones de programación
         self.schedule = args.schedule

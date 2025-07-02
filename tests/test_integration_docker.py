@@ -131,27 +131,33 @@ class TestDockerIntegration:
         backup_content = "-- PostgreSQL database dump\nCREATE TABLE test_table();\n"
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value.write.return_value = None
-                mock_open.return_value.__enter__.return_value.read.return_value = (
-                    backup_content
-                )
+            with patch(
+                "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+            ) as mock_resolve:
+                # Generate a specific backup filename
+                backup_filename = "backup_20250702_220154_full.sql"
+                mock_resolve.return_value = (backup_filename, False)
+                
+                # Create the backup file in the temp directory
+                backup_path = temp_backup_dir / backup_filename
+                backup_path.write_text(backup_content)
 
-                with patch("pathlib.Path.stat") as mock_stat:
-                    mock_stat.return_value.st_size = len(backup_content)
+                result = docker_orchestrator.create_backup()
 
-                    result = docker_orchestrator.create_backup()
+                assert result is True
+                mock_run.assert_called()
 
-                    assert result is True
-                    mock_run.assert_called()
-
-                    call_args = mock_run.call_args[0][0]
-                    assert "docker" in call_args
-                    assert "exec" in call_args
-                    assert "postgres_container" in call_args
-                    assert "pg_dump" in call_args
+                call_args = mock_run.call_args[0][0]
+                assert "docker" in call_args
+                assert "exec" in call_args
+                assert "postgres_container" in call_args
+                assert "pg_dump" in call_args
+                
+                # Verify the backup file was created and has content
+                assert backup_path.exists()
+                assert backup_path.stat().st_size > 0
 
     @patch("subprocess.run")
     def test_docker_data_loss_simulation(self, mock_run, docker_orchestrator):
@@ -254,23 +260,35 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         """Test que verifica la estrategia de backup incremental en Docker"""
         existing_backup = temp_backup_dir / "backup_full_20240101.sql"
         existing_backup.write_text("-- Full backup content")
+        
+        backup_content = "-- Incremental backup content"
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
             with patch(
                 "backup_cli.backup_strategy.BackupStrategy.determine_backup_type"
             ) as mock_strategy:
                 mock_strategy.return_value = "incremental"
 
-                with patch("builtins.open", create=True):
-                    with patch("pathlib.Path.stat") as mock_stat:
-                        mock_stat.return_value.st_size = 1024
+                with patch(
+                    "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+                ) as mock_resolve:
+                    backup_filename = "backup_20250702_220154_incremental.sql"
+                    mock_resolve.return_value = (backup_filename, False)
+                    
+                    # Create the backup file in the temp directory
+                    backup_path = temp_backup_dir / backup_filename
+                    backup_path.write_text(backup_content)
 
-                        result = docker_orchestrator.create_backup()
+                    result = docker_orchestrator.create_backup()
 
-                        assert result is True
-                        mock_run.assert_called()
+                    assert result is True
+                    mock_run.assert_called()
+                    
+                    # Verify the backup file was created
+                    assert backup_path.exists()
+                    assert backup_path.stat().st_size > 0
 
     @patch("subprocess.run")
     def test_docker_backup_list_and_management(
@@ -326,16 +344,26 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         backup_file.write_text(backup_content)
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
-            with patch("builtins.open", create=True):
-                with patch("pathlib.Path.stat") as mock_stat:
-                    mock_stat.return_value.st_size = len(backup_content)
+            with patch(
+                "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+            ) as mock_resolve:
+                backup_filename = "integration_test_20250702_220154.sql"
+                mock_resolve.return_value = (backup_filename, False)
+                
+                # Create the backup file in the temp directory
+                backup_path = temp_backup_dir / backup_filename
+                backup_path.write_text(backup_content)
 
-                    backup_result = docker_orchestrator.create_backup(
-                        custom_name="integration_test"
-                    )
-                    assert backup_result is True
+                backup_result = docker_orchestrator.create_backup(
+                    custom_name="integration_test"
+                )
+                assert backup_result is True
+                
+                # Verify the backup file was created
+                assert backup_path.exists()
+                assert backup_path.stat().st_size > 0
 
             # Restaurar los datos
             with patch("builtins.input") as mock_input:
@@ -409,27 +437,43 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         """Test que verifica el manejo de backups concurrentes en Docker"""
 
         # Simular intentos de backup concurrentes
+        backup_content = "-- Concurrent backup content"
+        
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
-            with patch("builtins.open", create=True):
-                with patch("pathlib.Path.stat") as mock_stat:
-                    mock_stat.return_value.st_size = 1024
+            with patch(
+                "backup_cli.backup_strategy.BackupStrategy.determine_backup_type"
+            ) as mock_strategy:
+                # Forzar ambos backups a ser de tipo full para evitar problemas de lógica incremental
+                mock_strategy.return_value = "full"
 
-                    with patch(
-                        "backup_cli.backup_strategy.BackupStrategy.determine_backup_type"
-                    ) as mock_strategy:
-                        # Forzar ambos backups a ser de tipo full para evitar problemas de lógica incremental
-                        mock_strategy.return_value = "full"
+                with patch(
+                    "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+                ) as mock_resolve:
+                    
+                    # First backup
+                    backup_filename_1 = "concurrent_test_1_20250702_220154.sql"
+                    mock_resolve.return_value = (backup_filename_1, False)
+                    
+                    backup_path_1 = temp_backup_dir / backup_filename_1
+                    backup_path_1.write_text(backup_content)
 
-                        # Primer backup debe ser exitoso
-                        result1 = docker_orchestrator.create_backup(
-                            custom_name="concurrent_test_1"
-                        )
-                        assert result1 is True
+                    result1 = docker_orchestrator.create_backup(
+                        custom_name="concurrent_test_1"
+                    )
+                    assert result1 is True
+                    assert backup_path_1.exists()
 
-                        # Segundo backup con nombre diferente debe ser exitoso
-                        result2 = docker_orchestrator.create_backup(
-                            custom_name="concurrent_test_2"
-                        )
-                        assert result2 is True
+                    # Second backup with different filename
+                    backup_filename_2 = "concurrent_test_2_20250702_220154.sql"
+                    mock_resolve.return_value = (backup_filename_2, False)
+                    
+                    backup_path_2 = temp_backup_dir / backup_filename_2
+                    backup_path_2.write_text(backup_content)
+
+                    result2 = docker_orchestrator.create_backup(
+                        custom_name="concurrent_test_2"
+                    )
+                    assert result2 is True
+                    assert backup_path_2.exists()

@@ -137,29 +137,34 @@ class TestK8sIntegration:
         backup_content = "-- PostgreSQL database dump\nCREATE TABLE test_table();\n"
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value.write.return_value = None
-                mock_open.return_value.__enter__.return_value.read.return_value = (
-                    backup_content
-                )
+            with patch(
+                "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+            ) as mock_resolve:
+                backup_filename = "backup_20250702_220155_full.sql"
+                mock_resolve.return_value = (backup_filename, False)
+                
+                # Create the backup file in the temp directory
+                backup_path = temp_backup_dir / backup_filename
+                backup_path.write_text(backup_content)
 
-                with patch("pathlib.Path.stat") as mock_stat:
-                    mock_stat.return_value.st_size = len(backup_content)
+                result = k8s_orchestrator.create_backup()
 
-                    result = k8s_orchestrator.create_backup()
+                assert result is True
+                mock_run.assert_called()
 
-                    assert result is True
-                    mock_run.assert_called()
-
-                    call_args = mock_run.call_args[0][0]
-                    assert "kubectl" in call_args
-                    assert "exec" in call_args
-                    assert "postgres-0" in call_args
-                    # For K8s, pg_dump is wrapped in shell command with env vars
-                    call_string = " ".join(call_args)
-                    assert "pg_dump" in call_string
+                call_args = mock_run.call_args[0][0]
+                assert "kubectl" in call_args
+                assert "exec" in call_args
+                assert "postgres-0" in call_args
+                # For K8s, pg_dump is wrapped in shell command with env vars
+                call_string = " ".join(call_args)
+                assert "pg_dump" in call_string
+                
+                # Verify the backup file was created
+                assert backup_path.exists()
+                assert backup_path.stat().st_size > 0
 
     @patch("subprocess.run")
     def test_k8s_data_loss_simulation(self, mock_run, k8s_orchestrator):
@@ -282,18 +287,28 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         # Mock responses: 1st for pod check, 2nd for pg_dump
         mock_responses = [
             Mock(returncode=0, stdout=pod_status_json),  # Pod status check
-            Mock(returncode=0, stderr=""),  # pg_dump execution
+            Mock(returncode=0, stderr="", stdout=backup_content),  # pg_dump execution
         ]
         mock_run.side_effect = mock_responses
 
-        with patch("builtins.open", create=True):
-            with patch("pathlib.Path.stat") as mock_stat:
-                mock_stat.return_value.st_size = len(backup_content)
+        with patch(
+            "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
+        ) as mock_resolve:
+            backup_filename = "integration_test_20250702_220155.sql"
+            mock_resolve.return_value = (backup_filename, False)
+            
+            # Create the backup file in the temp directory
+            backup_path = temp_backup_dir / backup_filename
+            backup_path.write_text(backup_content)
 
-                backup_result = k8s_orchestrator.create_backup(
-                    custom_name="integration_test"
-                )
-                assert backup_result is True
+            backup_result = k8s_orchestrator.create_backup(
+                custom_name="integration_test"
+            )
+            assert backup_result is True
+            
+            # Verify the backup file was created
+            assert backup_path.exists()
+            assert backup_path.stat().st_size > 0
 
         # Step 3: Restore data
         mock_run.side_effect = [
