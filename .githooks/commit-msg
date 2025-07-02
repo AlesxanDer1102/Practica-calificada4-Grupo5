@@ -8,11 +8,11 @@ MSG="$(head -n1 "$MSG_FILE")"
 PATTERN='^(feat|fix|chore|docs|style|refactor|perf|test)(\([a-z0-9_-]+\))?: [A-ZÁÉÍÓÚÑ][[:print:]]{1,72}$'
 
 if [[ "$MSG" =~ $PATTERN ]]; then
-  echo "✔ Commit message válido."
+  echo " Commit message válido."
   exit 0
 else
   cat << EOF
-✗ Commit message inválido.
+ Commit message inválido.
 
 Debe seguir Conventional Commits:
   tipo(opcional_scope)?: Descripción breve

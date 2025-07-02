@@ -90,7 +90,7 @@ check_kubernetes() {
 
 # Función para ejecutar tests Docker
 run_docker_tests() {
-    log_info "🐳 Ejecutando tests Docker disaster recovery..."
+    log_info " Ejecutando tests Docker disaster recovery..."
     
     if ! check_docker; then
         log_error "Docker no disponible, saltando tests Docker"
@@ -111,7 +111,7 @@ run_docker_tests() {
 
 # Función para ejecutar tests Kubernetes
 run_kubernetes_tests() {
-    log_info "☸️ Ejecutando tests Kubernetes disaster recovery..."
+    log_info "️ Ejecutando tests Kubernetes disaster recovery..."
     
     if ! check_kubernetes; then
         log_error "Kubernetes no disponible, saltando tests K8s"
@@ -132,7 +132,7 @@ run_kubernetes_tests() {
 
 # Función para ejecutar tests de benchmark
 run_benchmark_tests() {
-    log_info "📊 Ejecutando tests de benchmark..."
+    log_info " Ejecutando tests de benchmark..."
     
     pytest tests/e2e/ -m slow -v --tb=short
     local exit_code=$?
@@ -149,7 +149,7 @@ run_benchmark_tests() {
 # Función para mostrar ayuda
 show_help() {
     cat << EOF
-🔥 Script de Tests E2E Disaster Recovery
+ Script de Tests E2E Disaster Recovery
 
 Uso: $0 [OPCIÓN]
 
@@ -177,7 +177,7 @@ EOF
 
 # Función principal
 main() {
-    echo "🔥 Tests E2E de Recuperación ante Desastres"
+    echo " Tests E2E de Recuperación ante Desastres"
     echo "=========================================="
     
     # Verificar prerrequisitos básicos
@@ -262,17 +262,17 @@ main() {
     
     # Reporte final
     echo ""
-    echo "📊 RESUMEN DE EJECUCIÓN"
+    echo " RESUMEN DE EJECUCIÓN"
     echo "======================="
     echo "Tests ejecutados: $total_tests"
     echo "Tests exitosos: $passed_tests"
     echo "Tests fallidos: $((total_tests - passed_tests))"
     
     if [ $passed_tests -eq $total_tests ]; then
-        log_success "🎉 Todos los tests pasaron exitosamente"
+        log_success " Todos los tests pasaron exitosamente"
         exit 0
     else
-        log_error "❌ Algunos tests fallaron"
+        log_error " Algunos tests fallaron"
         
         # Detalles de fallos
         if [ $docker_result -ne 0 ]; then

@@ -111,4 +111,4 @@ class BackupLogger:
 
         except Exception as e:
             print_colored_message("ERROR", f"Error leyendo historial: {e}")
-            return [] 
+            return []

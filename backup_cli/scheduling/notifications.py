@@ -3,12 +3,12 @@ Sistema de notificaciones para backups automáticos refactorizado
 Aplicando SRP y Factory Pattern
 """
 
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
+from ..utils.colors import print_colored_message
 from .backup_logger import BackupLogger
 from .notification_factory import NotificationFactory
 from .notifiers import INotifier
-from ..utils.colors import print_colored_message
 
 
 class NotificationManager:
@@ -37,14 +37,18 @@ class NotificationManager:
         """
         try:
             # 1. Logging (siempre se hace)
-            self.backup_logger.log_backup_status(success, backup_name, environment, target, details)
-            self.backup_logger.update_status_file(success, backup_name, environment, target, details)
+            self.backup_logger.log_backup_status(
+                success, backup_name, environment, target, details
+            )
+            self.backup_logger.update_status_file(
+                success, backup_name, environment, target, details
+            )
 
             # 2. Crear configuración para notificadores
             config = {
-                'email': email,
-                'slack_token': slack_token,
-                'slack_channel': slack_channel
+                "email": email,
+                "slack_token": slack_token,
+                "slack_channel": slack_channel,
             }
 
             # 3. Crear notificadores basado en configuración
@@ -55,12 +59,20 @@ class NotificationManager:
             for notifier in notifiers:
                 try:
                     result = notifier.send_notification(
-                        success, backup_name, environment, target, details,
-                        email=email, slack_token=slack_token, slack_channel=slack_channel
+                        success,
+                        backup_name,
+                        environment,
+                        target,
+                        details,
+                        email=email,
+                        slack_token=slack_token,
+                        slack_channel=slack_channel,
                     )
                     all_results.append(result)
                 except Exception as e:
-                    print_colored_message("ERROR", f"Error con notificador {type(notifier).__name__}: {e}")
+                    print_colored_message(
+                        "ERROR", f"Error con notificador {type(notifier).__name__}: {e}"
+                    )
                     all_results.append(False)
 
             # Retornar True si al menos un notificador funcionó, o si no hay notificadores
@@ -69,8 +81,6 @@ class NotificationManager:
         except Exception as e:
             print_colored_message("ERROR", f"Error general en notificación: {e}")
             return False
-
-
 
     def get_last_backup_status(self) -> Optional[Dict]:
         """
@@ -86,16 +96,27 @@ class NotificationManager:
         """
         return self.backup_logger.get_backup_history(lines)
 
-    def test_notification_system(self, email: str = None, slack_token: str = None, slack_channel: str = None, environment: str = "docker") -> bool:
+    def test_notification_system(
+        self,
+        email: str = None,
+        slack_token: str = None,
+        slack_channel: str = None,
+        environment: str = "docker",
+    ) -> bool:
         """
         Prueba el sistema de notificaciones usando la arquitectura refactorizada
         """
-        print_colored_message("INFO", f"Probando sistema de notificaciones en entorno {environment.upper()}...")
+        print_colored_message(
+            "INFO",
+            f"Probando sistema de notificaciones en entorno {environment.upper()}...",
+        )
 
         # Determinar target según entorno
-        test_target = "test_container" if environment.lower() == "docker" else "test_postgres_pod"
+        test_target = (
+            "test_container" if environment.lower() == "docker" else "test_postgres_pod"
+        )
         test_log = f"Prueba del sistema de notificaciones en {environment.upper()}"
-        
+
         # Usar el método refactorizado
         success = self.notify_backup_status(
             success=True,
@@ -105,14 +126,18 @@ class NotificationManager:
             email=email,
             slack_token=slack_token,
             slack_channel=slack_channel,
-            details=test_log
+            details=test_log,
         )
 
         if not email and not (slack_token and slack_channel):
-            print_colored_message("SUCCESS", "Sistema de notificaciones funcionando (solo logging)")
+            print_colored_message(
+                "SUCCESS", "Sistema de notificaciones funcionando (solo logging)"
+            )
         elif success:
-            print_colored_message("SUCCESS", "Todas las notificaciones enviadas exitosamente")
+            print_colored_message(
+                "SUCCESS", "Todas las notificaciones enviadas exitosamente"
+            )
         else:
             print_colored_message("WARNING", "Algunas notificaciones fallaron")
 
-        return success 
+        return success

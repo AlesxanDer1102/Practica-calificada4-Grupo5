@@ -3,9 +3,9 @@
 
 # 1. Comprobar que no hay archivos con trailing whitespace
 if git diff --cached --check; then
-  echo "✔ No trailing whitespace."
+  echo " No trailing whitespace."
 else
-  echo "✗ Trailing whitespace detectado. Corrígelo antes de commitear."
+  echo " Trailing whitespace detectado. Corrígelo antes de commitear."
   exit 1
 fi
 

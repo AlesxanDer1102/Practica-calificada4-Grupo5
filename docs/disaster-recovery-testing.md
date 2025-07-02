@@ -1,17 +1,17 @@
-# 🔥 Tests E2E de Recuperación ante Desastres
+#  Tests E2E de Recuperación ante Desastres
 
-## 📋 Descripción General
+##  Descripción General
 
 Este módulo implementa tests End-to-End (E2E) completos para validar la capacidad del sistema de backup/restauración para recuperarse de escenarios de desastre catastróficos.
 
-### 🎯 Objetivos
+###  Objetivos
 
 - **Simular pérdidas catastróficas** de datos y volúmenes
 - **Validar recuperación completa** desde backups
 - **Medir tiempo de recuperación** (RTO - Recovery Time Objective)
 - **Verificar integridad** de datos tras recuperación
 
-## 🏗️ Arquitectura de Testing
+## ️ Arquitectura de Testing
 
 ### Componentes Principales
 
@@ -35,7 +35,7 @@ tests/e2e/
 └── test_kubernetes_disaster_recovery.py  # Tests Kubernetes
 ```
 
-## 🔥 Tipos de Desastres Simulados
+##  Tipos de Desastres Simulados
 
 ### 1. Eliminación Completa de Volúmenes
 
@@ -121,7 +121,7 @@ analysis = analyzer.analyze_rto_performance(rto_monitor)
 # - Recomendaciones automáticas
 ```
 
-## 🔄 Flujo Completo de Testing
+##  Flujo Completo de Testing
 
 ### Test Workflow Automatizado
 
@@ -178,7 +178,7 @@ result = recovery_test.run_full_disaster_recovery_test("postgres_container")
 }
 ```
 
-## 🐳 Tests Docker
+##  Tests Docker
 
 ### Ejecutar Tests
 
@@ -209,7 +209,7 @@ pytest tests/e2e/test_docker_disaster_recovery.py -m slow -v
 6. **test_docker_multiple_disaster_types**: Múltiples tipos de desastre
 7. **test_docker_performance_benchmark**: Benchmark de performance
 
-## ☸️ Tests Kubernetes
+## ️ Tests Kubernetes
 
 ### Ejecutar Tests
 
@@ -243,7 +243,7 @@ pytest tests/e2e/test_kubernetes_disaster_recovery.py -m slow -v
 8. **test_kubernetes_cluster_connectivity**: Conectividad básica cluster
 9. **test_kubernetes_disaster_recovery_stress**: Test de stress
 
-## 📊 Métricas y Reportes
+##  Métricas y Reportes
 
 ### Categorías de Performance RTO
 
@@ -257,7 +257,7 @@ pytest tests/e2e/test_kubernetes_disaster_recovery.py -m slow -v
 ```
 === REPORTE DE ANÁLISIS RTO ===
 
-📊 MÉTRICAS GENERALES:
+ MÉTRICAS GENERALES:
 - Total de sesiones: 10
 - RTO objetivo: 300s (5.0 min)
 - Tasa de cumplimiento: 90.0%
@@ -269,21 +269,21 @@ pytest tests/e2e/test_kubernetes_disaster_recovery.py -m slow -v
 - Máximo: 287.3s
 - P95: 275.1s
 
-📈 CATEGORÍAS DE PERFORMANCE:
+ CATEGORÍAS DE PERFORMANCE:
 - Excelente: 3 (30.0%)
 - Bueno: 4 (40.0%)
 - Aceptable: 2 (20.0%)
 - Deficiente: 1 (10.0%)
 
-🔍 TENDENCIA: IMPROVING
+ TENDENCIA: IMPROVING
 - Cambio: +12.5%
 
-💡 RECOMENDACIONES:
+ RECOMENDACIONES:
   1. Performance RTO dentro de parámetros aceptables.
   2. Considerar optimización para casos excepcionales.
 ```
 
-## 🚀 Ejecución Completa
+##  Ejecución Completa
 
 ### Script de Ejecución
 
@@ -291,21 +291,21 @@ pytest tests/e2e/test_kubernetes_disaster_recovery.py -m slow -v
 #!/bin/bash
 # Ejecutar todos los tests de disaster recovery
 
-echo "🔥 Ejecutando Tests E2E de Disaster Recovery"
+echo " Ejecutando Tests E2E de Disaster Recovery"
 
 # Tests Docker
-echo "🐳 Tests Docker..."
+echo " Tests Docker..."
 pytest tests/e2e/test_docker_disaster_recovery.py -v --tb=short
 
 # Tests Kubernetes (si está disponible)
-echo "☸️ Tests Kubernetes..."
+echo "️ Tests Kubernetes..."
 pytest tests/e2e/test_kubernetes_disaster_recovery.py -v --tb=short
 
 # Tests de benchmark (opcional)
-echo "📊 Tests de Benchmark..."
+echo " Tests de Benchmark..."
 pytest tests/e2e/ -m slow -v --tb=short
 
-echo "✅ Tests completados"
+echo " Tests completados"
 ```
 
 ### Configuración pytest.ini
@@ -323,7 +323,7 @@ python_classes = Test*
 python_functions = test_*
 ```
 
-## 🔧 Solución de Problemas
+##  Solución de Problemas
 
 ### Docker
 
@@ -352,7 +352,7 @@ python_functions = test_*
 **Error**: Tests fallan por timeout
 - **Solución**: Aumentar timeouts en configuración de tests según recursos disponibles
 
-## 📈 Futuras Mejoras
+##  Futuras Mejoras
 
 ### Funcionalidades Planificadas
 
@@ -371,7 +371,7 @@ python_functions = test_*
 - Tests de escalabilidad durante recuperación
 - Integración con herramientas de monitoring (Prometheus, Grafana)
 
-## 📚 Referencias
+##  Referencias
 
 - [Kubernetes Disaster Recovery Best Practices](https://kubernetes.io/docs/concepts/cluster-administration/backup-restore/)
 - [Docker Volume Management](https://docs.docker.com/storage/volumes/)

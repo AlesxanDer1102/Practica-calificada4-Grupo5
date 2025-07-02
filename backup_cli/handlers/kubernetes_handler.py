@@ -101,7 +101,7 @@ class KubernetesHandler:
         print("-" * 60)
 
         for i, pod in enumerate(pods, 1):
-            status_color = "🟢" if pod["status"] == "Running" else "🔴"
+            status_color = "🟢" if pod["status"] == "Running" else ""
             print(f"  {i}. {pod['name']} [{pod['namespace']}] {status_color}")
             print(f"     Estado: {pod['status']}")
             print(f"     Contenedores: {', '.join(pod['containers'])}")

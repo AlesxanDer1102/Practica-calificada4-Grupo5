@@ -2,4 +2,4 @@
 # setup.sh
 
 git config core.hooksPath .githooks
-echo "✅ Hooks instalados desde .githooks/"
+echo " Hooks instalados desde .githooks/"

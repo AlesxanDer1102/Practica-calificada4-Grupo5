@@ -136,7 +136,9 @@ class K8sCronJobManager:
                                     },
                                     {
                                         "name": "backup-storage",
-                                        "persistentVolumeClaim": {"claimName": "backup-pvc"},
+                                        "persistentVolumeClaim": {
+                                            "claimName": "backup-pvc"
+                                        },
                                     },
                                 ],
                             }
@@ -231,7 +233,9 @@ fi
                 return False
 
         except ImportError:
-            print_colored_message("ERROR", "PyYAML requerido para CronJobs de Kubernetes")
+            print_colored_message(
+                "ERROR", "PyYAML requerido para CronJobs de Kubernetes"
+            )
             return False
         except Exception as e:
             print_colored_message("ERROR", f"Error aplicando manifest: {e}")
@@ -260,7 +264,9 @@ fi
             )
 
             if result.returncode != 0:
-                print_colored_message("ERROR", f"Error listando CronJobs: {result.stderr}")
+                print_colored_message(
+                    "ERROR", f"Error listando CronJobs: {result.stderr}"
+                )
                 return []
 
             data = json.loads(result.stdout)
@@ -297,7 +303,14 @@ fi
 
             # Eliminar ConfigMap asociado
             subprocess.run(
-                ["kubectl", "delete", "configmap", f"{name}-config", "-n", self.namespace],
+                [
+                    "kubectl",
+                    "delete",
+                    "configmap",
+                    f"{name}-config",
+                    "-n",
+                    self.namespace,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -307,7 +320,9 @@ fi
                 print_colored_message("SUCCESS", f"CronJob {name} eliminado")
                 return True
             else:
-                print_colored_message("ERROR", f"Error eliminando CronJob: {result.stderr}")
+                print_colored_message(
+                    "ERROR", f"Error eliminando CronJob: {result.stderr}"
+                )
                 return False
 
         except Exception as e:
@@ -339,7 +354,8 @@ fi
                     "WARNING", "ServiceAccount backup-service-account no encontrado"
                 )
                 print_colored_message(
-                    "INFO", "Crear manualmente: kubectl create serviceaccount backup-service-account"
+                    "INFO",
+                    "Crear manualmente: kubectl create serviceaccount backup-service-account",
                 )
                 return False
 
@@ -347,4 +363,4 @@ fi
 
         except Exception as e:
             print_colored_message("ERROR", f"Error verificando RBAC: {e}")
-            return False 
+            return False
