@@ -9,5 +9,6 @@ from .rto_monitor import RTOMonitor
 from .volume_destroyer import VolumeDestroyer
 from .data_corruptor import DataCorruptor
 from .full_recovery_test import FullRecoveryTest
+from .rto_analyzer import RTOAnalyzer
 
-__all__ = ["DisasterSimulator", "RecoveryValidator", "RTOMonitor", "VolumeDestroyer", "DataCorruptor", "FullRecoveryTest"] 
+__all__ = ["DisasterSimulator", "RecoveryValidator", "RTOMonitor", "VolumeDestroyer", "DataCorruptor", "FullRecoveryTest", "RTOAnalyzer"] 
