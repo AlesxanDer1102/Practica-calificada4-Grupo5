@@ -162,7 +162,7 @@ class DataCorruptor(DisasterSimulator):
                     "-U",
                     "postgres",
                     "-d",
-                    "pc_db",
+                    "test_db",
                     "-t",
                     "-c",
                     "SELECT tablename FROM pg_tables WHERE schemaname='public';",
@@ -177,7 +177,7 @@ class DataCorruptor(DisasterSimulator):
                     "-U",
                     "postgres",
                     "-d",
-                    "pc_db",
+                    "test_db",
                     "-t",
                     "-c",
                     "SELECT tablename FROM pg_tables WHERE schemaname='public';",
@@ -190,15 +190,15 @@ class DataCorruptor(DisasterSimulator):
                     line.strip() for line in result.stdout.split("\n") if line.strip()
                 ]
                 return (
-                    tables if tables else ["usuarios", "productos", "pedidos"]
-                )  # Fallback
+                    tables if tables else ["pg_type", "pg_attribute", "pg_class"]
+                )
             else:
-                # Fallback con tablas por defecto
-                return ["usuarios", "productos", "pedidos"]
+                # Fallback con tablas por defecto del sistema
+                return ["pg_type", "pg_attribute", "pg_class"]
 
         except Exception:
             # Fallback en caso de error
-            return ["usuarios", "productos", "pedidos"]
+            return ["pg_type", "pg_attribute", "pg_class"]
 
     def is_recoverable(self) -> bool:
         """
