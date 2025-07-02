@@ -7,7 +7,7 @@ import time
 import subprocess
 from typing import Dict, Any
 
-from .disaster_recovery import (
+from tests.e2e.disaster_recovery import (
     VolumeDestroyer, DataCorruptor, FullRecoveryTest, 
     RTOMonitor, RTOAnalyzer
 )
