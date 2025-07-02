@@ -210,7 +210,7 @@ Opciones generales:
     backup_group.add_argument(
         "--apply-encryption",
         action="store_true",
-        help="Aplica encriptación a los backups creados",
+        help="Aplicar encriptación a los backups creados",
     )
 
     # Opciones de programación automática
@@ -276,6 +276,151 @@ Opciones generales:
         "--test-notifications",
         action="store_true",
         help="Probar configuración de notificaciones",
+    )
+
+    # Opciones de versionado de backups
+    version_group = parser.add_argument_group("Versionado de backups")
+    version_group.add_argument(
+        "--enable-versioning",
+        action="store_true",
+        help="Habilitar versionado semántico de backups",
+    )
+
+    version_group.add_argument(
+        "--version",
+        type=str,
+        help="Versión específica para el backup (formato: 1.2.3-branch.build)",
+    )
+
+    version_group.add_argument(
+        "--branch",
+        type=str,
+        choices=[
+            "main",
+            "develop",
+            "staging",
+            "hotfix",
+            "feature",
+            "release",
+            "manual",
+        ],
+        default="main",
+        help="Rama de versionado para el backup (predeterminado: main)",
+    )
+
+    version_group.add_argument(
+        "--version-increment",
+        type=str,
+        choices=["major", "minor", "patch"],
+        default="patch",
+        help="Nivel de incremento automático de versión (predeterminado: patch)",
+    )
+
+    version_group.add_argument(
+        "--tags",
+        type=str,
+        nargs="*",
+        help="Etiquetas para el backup versionado (ej: --tags production stable v1.0)",
+    )
+
+    version_group.add_argument(
+        "--description",
+        type=str,
+        help="Descripción para el backup versionado",
+    )
+
+    # Operaciones de versionado
+    version_ops_group = parser.add_argument_group("Operaciones de versionado")
+    version_ops_group.add_argument(
+        "--list-versions",
+        action="store_true",
+        help="Listar todas las versiones de backups",
+    )
+
+    version_ops_group.add_argument(
+        "--list-branches",
+        action="store_true",
+        help="Listar todas las ramas de versionado",
+    )
+
+    version_ops_group.add_argument(
+        "--list-tags",
+        action="store_true",
+        help="Listar todas las etiquetas disponibles",
+    )
+
+    version_ops_group.add_argument(
+        "--version-info",
+        type=str,
+        help="Mostrar información detallada de una versión específica",
+    )
+
+    version_ops_group.add_argument(
+        "--compare-versions",
+        type=str,
+        nargs=2,
+        metavar=("VERSION1", "VERSION2"),
+        help="Comparar dos versiones de backup",
+    )
+
+    version_ops_group.add_argument(
+        "--create-tag",
+        type=str,
+        nargs=2,
+        metavar=("VERSION", "TAG_NAME"),
+        help="Crear etiqueta para una versión específica",
+    )
+
+    version_ops_group.add_argument(
+        "--rollback-to",
+        type=str,
+        help="Hacer rollback a una versión específica",
+    )
+
+    version_ops_group.add_argument(
+        "--rollback-history",
+        action="store_true",
+        help="Mostrar historial de rollbacks",
+    )
+
+    version_ops_group.add_argument(
+        "--cleanup-versions",
+        type=int,
+        metavar="KEEP_COUNT",
+        help="Limpiar versiones antiguas manteniendo KEEP_COUNT por rama",
+    )
+
+    version_ops_group.add_argument(
+        "--cleanup-dry-run",
+        action="store_true",
+        help="Simular limpieza de versiones sin eliminar archivos",
+    )
+
+    version_ops_group.add_argument(
+        "--filter-branch",
+        type=str,
+        choices=[
+            "main",
+            "develop",
+            "staging",
+            "hotfix",
+            "feature",
+            "release",
+            "manual",
+        ],
+        help="Filtrar operaciones por rama específica",
+    )
+
+    version_ops_group.add_argument(
+        "--filter-tag",
+        type=str,
+        help="Filtrar operaciones por etiqueta específica",
+    )
+
+    version_ops_group.add_argument(
+        "--limit",
+        type=int,
+        help="Limitar número de resultados mostrados",
     )
 
     return parser
@@ -358,6 +503,28 @@ class CLIConfig:
         self.list_schedules = args.list_schedules
         self.remove_schedule = args.remove_schedule
         self.test_notifications = args.test_notifications
+
+        # Argumentos de versionado
+        self.enable_versioning = getattr(args, "enable_versioning", False)
+        self.version = getattr(args, "version", None)
+        self.version_increment = getattr(args, "version_increment", "patch")
+        self.branch = getattr(args, "branch", "main")
+        self.tags = getattr(args, "tags", [])
+        self.description = getattr(args, "description", "")
+        self.auto_increment = getattr(args, "auto_increment", "patch")
+        self.list_versions = getattr(args, "list_versions", False)
+        self.list_branches = getattr(args, "list_branches", False)
+        self.list_tags = getattr(args, "list_tags", False)
+        self.version_info = getattr(args, "version_info", None)
+        self.compare_versions = getattr(args, "compare_versions", None)
+        self.create_tag = getattr(args, "create_tag", None)
+        self.rollback_to = getattr(args, "rollback_to", None)
+        self.rollback_history = getattr(args, "rollback_history", False)
+        self.cleanup_versions = getattr(args, "cleanup_versions", None)
+        self.cleanup_dry_run = getattr(args, "cleanup_dry_run", False)
+        self.filter_branch = getattr(args, "filter_branch", None)
+        self.filter_tag = getattr(args, "filter_tag", None)
+        self.limit = getattr(args, "limit", None)
 
         # Configuraciones derivadas
         self.show_progress = not args.quiet
