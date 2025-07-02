@@ -12,13 +12,13 @@ from .notifiers import INotifier, EmailNotifier, SlackNotifier
 from .notification_factory import NotificationFactory, NotifierType
 
 __all__ = [
-    "CronManager", 
+    "CronManager",
     "K8sCronJobManager",
     "NotificationManager",
     "BackupLogger",
-    "INotifier", 
-    "EmailNotifier", 
+    "INotifier",
+    "EmailNotifier",
     "SlackNotifier",
     "NotificationFactory",
-    "NotifierType"
-] 
+    "NotifierType",
+]

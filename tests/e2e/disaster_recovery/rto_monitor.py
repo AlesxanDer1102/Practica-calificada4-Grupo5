@@ -28,7 +28,7 @@ class RTOMonitor:
             "start_time": time.time(),
             "end_time": None,
             "duration": None,
-            "rto_met": None
+            "rto_met": None,
         }
         return session_id
 
@@ -41,19 +41,21 @@ class RTOMonitor:
 
         end_time = time.time()
         duration = end_time - self.current_session["start_time"]
-        
-        self.current_session.update({
-            "end_time": end_time,
-            "duration": duration,
-            "rto_met": duration <= self.target_rto
-        })
-        
+
+        self.current_session.update(
+            {
+                "end_time": end_time,
+                "duration": duration,
+                "rto_met": duration <= self.target_rto,
+            }
+        )
+
         # Guardar en historial
         self.recovery_sessions.append(self.current_session.copy())
-        
+
         result = self.current_session.copy()
         self.current_session = None
-        
+
         return result
 
     def get_rto_metrics(self) -> Dict[str, Any]:
@@ -63,21 +65,25 @@ class RTOMonitor:
         if not self.recovery_sessions:
             return {"total_sessions": 0, "avg_recovery_time": 0, "rto_compliance": 0}
 
-        durations = [s["duration"] for s in self.recovery_sessions if s["duration"] is not None]
+        durations = [
+            s["duration"] for s in self.recovery_sessions if s["duration"] is not None
+        ]
         rto_compliant = [s for s in self.recovery_sessions if s["rto_met"]]
-        
+
         return {
             "target_rto_seconds": self.target_rto,
             "total_sessions": len(self.recovery_sessions),
             "avg_recovery_time": sum(durations) / len(durations) if durations else 0,
             "min_recovery_time": min(durations) if durations else 0,
             "max_recovery_time": max(durations) if durations else 0,
-            "rto_compliance_rate": len(rto_compliant) / len(self.recovery_sessions) * 100,
-            "sessions": self.recovery_sessions
+            "rto_compliance_rate": len(rto_compliant)
+            / len(self.recovery_sessions)
+            * 100,
+            "sessions": self.recovery_sessions,
         }
 
     def is_rto_acceptable(self, duration: float) -> bool:
         """
         Verifica si el tiempo está dentro del objetivo RTO
         """
-        return duration <= self.target_rto 
+        return duration <= self.target_rto

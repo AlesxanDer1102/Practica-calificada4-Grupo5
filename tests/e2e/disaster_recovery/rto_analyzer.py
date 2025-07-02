@@ -27,13 +27,13 @@ class RTOAnalyzer:
         Análisis detallado de performance RTO
         """
         metrics = rto_monitor.get_rto_metrics()
-        
+
         if not metrics["sessions"]:
             return {"error": "No hay sesiones RTO para analizar"}
 
         sessions = metrics["sessions"]
         durations = [s["duration"] for s in sessions if s["duration"] is not None]
-        
+
         if not durations:
             return {"error": "No hay duraciones válidas para analizar"}
 
@@ -48,18 +48,22 @@ class RTOAnalyzer:
                 "min": min(durations),
                 "max": max(durations),
                 "p95": self._percentile(durations, 95),
-                "p99": self._percentile(durations, 99)
+                "p99": self._percentile(durations, 99),
             },
-            "performance_categories": self._categorize_performance(durations, metrics["target_rto_seconds"]),
+            "performance_categories": self._categorize_performance(
+                durations, metrics["target_rto_seconds"]
+            ),
             "disaster_type_analysis": self._analyze_by_disaster_type(sessions),
             "trends": self._analyze_trends(sessions),
-            "recommendations": self._generate_recommendations(durations, metrics["target_rto_seconds"]),
-            "analysis_timestamp": time.time()
+            "recommendations": self._generate_recommendations(
+                durations, metrics["target_rto_seconds"]
+            ),
+            "analysis_timestamp": time.time(),
         }
-        
+
         self.analysis_history.append(analysis)
         self._save_analysis(analysis)
-        
+
         return analysis
 
     def _percentile(self, data: List[float], percentile: int) -> float:
@@ -68,7 +72,7 @@ class RTOAnalyzer:
         """
         sorted_data = sorted(data)
         index = (percentile / 100) * (len(sorted_data) - 1)
-        
+
         if index.is_integer():
             return sorted_data[int(index)]
         else:
@@ -76,22 +80,36 @@ class RTOAnalyzer:
             upper = sorted_data[int(index) + 1]
             return lower + (upper - lower) * (index - int(index))
 
-    def _categorize_performance(self, durations: List[float], target_rto: int) -> Dict[str, Any]:
+    def _categorize_performance(
+        self, durations: List[float], target_rto: int
+    ) -> Dict[str, Any]:
         """
         Categoriza performance según tiempos
         """
-        excellent = [d for d in durations if d <= target_rto * 0.5]  # Menos del 50% del RTO
-        good = [d for d in durations if target_rto * 0.5 < d <= target_rto * 0.8]  # 50-80% del RTO
-        acceptable = [d for d in durations if target_rto * 0.8 < d <= target_rto]  # 80-100% del RTO
+        excellent = [
+            d for d in durations if d <= target_rto * 0.5
+        ]  # Menos del 50% del RTO
+        good = [
+            d for d in durations if target_rto * 0.5 < d <= target_rto * 0.8
+        ]  # 50-80% del RTO
+        acceptable = [
+            d for d in durations if target_rto * 0.8 < d <= target_rto
+        ]  # 80-100% del RTO
         poor = [d for d in durations if d > target_rto]  # Excede RTO
-        
+
         total = len(durations)
-        
+
         return {
-            "excellent": {"count": len(excellent), "percentage": len(excellent) / total * 100},
+            "excellent": {
+                "count": len(excellent),
+                "percentage": len(excellent) / total * 100,
+            },
             "good": {"count": len(good), "percentage": len(good) / total * 100},
-            "acceptable": {"count": len(acceptable), "percentage": len(acceptable) / total * 100},
-            "poor": {"count": len(poor), "percentage": len(poor) / total * 100}
+            "acceptable": {
+                "count": len(acceptable),
+                "percentage": len(acceptable) / total * 100,
+            },
+            "poor": {"count": len(poor), "percentage": len(poor) / total * 100},
         }
 
     def _analyze_by_disaster_type(self, sessions: List[Dict]) -> Dict[str, Any]:
@@ -99,15 +117,15 @@ class RTOAnalyzer:
         Análisis por tipo de desastre
         """
         by_type = {}
-        
+
         for session in sessions:
             disaster_type = session.get("disaster_type", "unknown")
             if disaster_type not in by_type:
                 by_type[disaster_type] = []
-            
+
             if session.get("duration") is not None:
                 by_type[disaster_type].append(session["duration"])
-        
+
         analysis = {}
         for disaster_type, durations in by_type.items():
             if durations:
@@ -115,9 +133,9 @@ class RTOAnalyzer:
                     "count": len(durations),
                     "avg_duration": mean(durations),
                     "min_duration": min(durations),
-                    "max_duration": max(durations)
+                    "max_duration": max(durations),
                 }
-        
+
         return analysis
 
     def _analyze_trends(self, sessions: List[Dict]) -> Dict[str, Any]:
@@ -129,51 +147,66 @@ class RTOAnalyzer:
 
         # Ordenar por timestamp
         sorted_sessions = sorted(sessions, key=lambda x: x.get("start_time", 0))
-        durations = [s["duration"] for s in sorted_sessions if s.get("duration") is not None]
-        
+        durations = [
+            s["duration"] for s in sorted_sessions if s.get("duration") is not None
+        ]
+
         if len(durations) < 3:
             return {"trend": "insufficient_duration_data"}
 
         # Calcular tendencia simple (primeros vs últimos)
-        first_half = durations[:len(durations)//2]
-        second_half = durations[len(durations)//2:]
-        
+        first_half = durations[: len(durations) // 2]
+        second_half = durations[len(durations) // 2 :]
+
         first_avg = mean(first_half)
         second_avg = mean(second_half)
-        
+
         improvement_percentage = ((first_avg - second_avg) / first_avg) * 100
-        
+
         return {
-            "trend": "improving" if improvement_percentage > 5 else 
-                    "degrading" if improvement_percentage < -5 else "stable",
+            "trend": (
+                "improving"
+                if improvement_percentage > 5
+                else "degrading" if improvement_percentage < -5 else "stable"
+            ),
             "improvement_percentage": improvement_percentage,
             "first_half_avg": first_avg,
-            "second_half_avg": second_avg
+            "second_half_avg": second_avg,
         }
 
-    def _generate_recommendations(self, durations: List[float], target_rto: int) -> List[str]:
+    def _generate_recommendations(
+        self, durations: List[float], target_rto: int
+    ) -> List[str]:
         """
         Genera recomendaciones basadas en análisis
         """
         recommendations = []
         avg_duration = mean(durations)
-        compliance_rate = len([d for d in durations if d <= target_rto]) / len(durations) * 100
-        
+        compliance_rate = (
+            len([d for d in durations if d <= target_rto]) / len(durations) * 100
+        )
+
         if compliance_rate < 80:
-            recommendations.append("RTO compliance bajo del 80%. Revisar estrategia de backup.")
-        
+            recommendations.append(
+                "RTO compliance bajo del 80%. Revisar estrategia de backup."
+            )
+
         if avg_duration > target_rto * 0.8:
-            recommendations.append("Tiempo promedio cercano al límite. Considerar optimización.")
-        
+            recommendations.append(
+                "Tiempo promedio cercano al límite. Considerar optimización."
+            )
+
         if max(durations) > target_rto * 2:
             recommendations.append("Algunos tests exceden significativamente el RTO.")
-        
+
         if stdev(durations) > avg_duration * 0.3:
-            recommendations.append("Alta variabilidad en tiempos. Revisar consistencia del proceso.")
-        
+            recommendations.append(
+                "Alta variabilidad en tiempos. Revisar consistencia del proceso."
+            )
+
         if not recommendations:
             recommendations.append("Performance RTO dentro de parámetros aceptables.")
-        
+
         return recommendations
 
     def _save_analysis(self, analysis: Dict[str, Any]):
@@ -182,8 +215,8 @@ class RTOAnalyzer:
         """
         timestamp = int(analysis["analysis_timestamp"])
         filename = self.results_dir / f"rto_analysis_{timestamp}.json"
-        
-        with open(filename, 'w', encoding='utf-8') as f:
+
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(analysis, f, indent=2, ensure_ascii=False)
 
     def generate_rto_report(self, analyses: List[Dict[str, Any]] = None) -> str:
@@ -197,7 +230,7 @@ class RTOAnalyzer:
             return "No hay datos de análisis RTO disponibles."
 
         latest = analyses[-1]
-        
+
         report = f"""
 === REPORTE DE ANÁLISIS RTO ===
 
@@ -225,7 +258,7 @@ class RTOAnalyzer:
 
 💡 RECOMENDACIONES:
 """
-        for i, rec in enumerate(latest['recommendations'], 1):
+        for i, rec in enumerate(latest["recommendations"], 1):
             report += f"  {i}. {rec}\n"
 
-        return report 
+        return report

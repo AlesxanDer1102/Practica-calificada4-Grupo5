@@ -12,6 +12,7 @@ from typing import Dict, Any
 try:
     from slack_sdk import WebClient
     from slack_sdk.errors import SlackApiError
+
     SLACK_AVAILABLE = True
 except ImportError:
     SLACK_AVAILABLE = False
@@ -32,7 +33,7 @@ class INotifier(ABC):
         environment: str,
         target: str,
         details: str = None,
-        **kwargs
+        **kwargs,
     ) -> bool:
         """
         Envía una notificación
@@ -53,12 +54,12 @@ class EmailNotifier(INotifier):
         environment: str,
         target: str,
         details: str = None,
-        **kwargs
+        **kwargs,
     ) -> bool:
         """
         Envía notificación por email
         """
-        email = kwargs.get('email')
+        email = kwargs.get("email")
         if not email:
             print_colored_message("ERROR", "Email no proporcionado para EmailNotifier")
             return False
@@ -152,13 +153,13 @@ class SlackNotifier(INotifier):
         environment: str,
         target: str,
         details: str = None,
-        **kwargs
+        **kwargs,
     ) -> bool:
         """
         Envía notificación vía Slack bot
         """
-        slack_token = kwargs.get('slack_token')
-        slack_channel = kwargs.get('slack_channel')
+        slack_token = kwargs.get("slack_token")
+        slack_channel = kwargs.get("slack_channel")
 
         if not slack_token or not slack_channel:
             print_colored_message("ERROR", "Token o canal de Slack no proporcionados")
@@ -166,7 +167,9 @@ class SlackNotifier(INotifier):
 
         try:
             if not SLACK_AVAILABLE:
-                print_colored_message("WARNING", "slack-sdk no disponible, notificación Slack omitida")
+                print_colored_message(
+                    "WARNING", "slack-sdk no disponible, notificación Slack omitida"
+                )
                 return True
 
             # Inicializar cliente Slack
@@ -181,10 +184,15 @@ class SlackNotifier(INotifier):
             response = client.chat_postMessage(**message)
 
             if response["ok"]:
-                print_colored_message("SUCCESS", f"Notificación Slack enviada al canal {slack_channel}")
+                print_colored_message(
+                    "SUCCESS", f"Notificación Slack enviada al canal {slack_channel}"
+                )
                 return True
             else:
-                print_colored_message("ERROR", f"Error enviando a Slack: {response.get('error', 'Unknown error')}")
+                print_colored_message(
+                    "ERROR",
+                    f"Error enviando a Slack: {response.get('error', 'Unknown error')}",
+                )
                 return False
 
         except SlackApiError as e:
@@ -210,7 +218,7 @@ class SlackNotifier(INotifier):
         status = "✅ ÉXITO" if success else "❌ FALLO"
         emoji = "✅" if success else "❌"
         color = "good" if success else "danger"
-        
+
         # Emoji específico del entorno
         env_emoji = "🐳" if environment.lower() == "docker" else "☸️"
         env_name = f"{env_emoji} {environment.upper()}"
@@ -223,44 +231,30 @@ class SlackNotifier(INotifier):
                 {
                     "color": color,
                     "fields": [
-                        {
-                            "title": "Estado",
-                            "value": status,
-                            "short": True
-                        },
-                        {
-                            "title": "Backup",
-                            "value": backup_name,
-                            "short": True
-                        },
+                        {"title": "Estado", "value": status, "short": True},
+                        {"title": "Backup", "value": backup_name, "short": True},
                         {
                             "title": "Entorno",
                             "value": f"{env_emoji} {environment.upper()}",
-                            "short": True
+                            "short": True,
                         },
-                        {
-                            "title": "Objetivo",
-                            "value": target,
-                            "short": True
-                        },
+                        {"title": "Objetivo", "value": target, "short": True},
                         {
                             "title": "Fecha",
-                            "value": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            "short": True
-                        }
+                            "value": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "short": True,
+                        },
                     ],
                     "footer": "Orquestador de Backups",
-                    "ts": int(datetime.now().timestamp())
+                    "ts": int(datetime.now().timestamp()),
                 }
-            ]
+            ],
         }
 
         # Agregar detalles si están disponibles
         if details:
-            message["attachments"][0]["fields"].append({
-                "title": "Detalles",
-                "value": details,
-                "short": False
-            })
+            message["attachments"][0]["fields"].append(
+                {"title": "Detalles", "value": details, "short": False}
+            )
 
-        return message 
+        return message

@@ -14,6 +14,7 @@ class NotifierType(Enum):
     """
     Tipos de notificadores disponibles
     """
+
     EMAIL = "email"
     SLACK = "slack"
 
@@ -44,7 +45,7 @@ class NotificationFactory:
         notifiers = []
 
         # Agregar EmailNotifier si email está configurado
-        if config.get('email'):
+        if config.get("email"):
             try:
                 email_notifier = NotificationFactory.create_notifier(NotifierType.EMAIL)
                 notifiers.append(email_notifier)
@@ -53,7 +54,7 @@ class NotificationFactory:
                 print_colored_message("ERROR", f"Error creando EmailNotifier: {e}")
 
         # Agregar SlackNotifier si Slack está configurado
-        if config.get('slack_token') and config.get('slack_channel'):
+        if config.get("slack_token") and config.get("slack_channel"):
             try:
                 slack_notifier = NotificationFactory.create_notifier(NotifierType.SLACK)
                 notifiers.append(slack_notifier)
@@ -71,4 +72,4 @@ class NotificationFactory:
         """
         Retorna lista de notificadores disponibles
         """
-        return [notifier_type.value for notifier_type in NotifierType] 
+        return [notifier_type.value for notifier_type in NotifierType]
