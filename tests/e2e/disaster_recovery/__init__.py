@@ -7,5 +7,6 @@ from .disaster_simulator import DisasterSimulator
 from .recovery_validator import RecoveryValidator
 from .rto_monitor import RTOMonitor
 from .volume_destroyer import VolumeDestroyer
+from .data_corruptor import DataCorruptor
 
-__all__ = ["DisasterSimulator", "RecoveryValidator", "RTOMonitor", "VolumeDestroyer"] 
+__all__ = ["DisasterSimulator", "RecoveryValidator", "RTOMonitor", "VolumeDestroyer", "DataCorruptor"] 
