@@ -16,8 +16,8 @@ pytestmark = [
     pytest.mark.e2e,
     pytest.mark.skipif(
         "GITHUB_ACTIONS" in os.environ,
-        reason="E2E tests requieren cluster Kubernetes no disponible en CI"
-    )
+        reason="E2E tests requieren cluster Kubernetes no disponible en CI",
+    ),
 ]
 
 try:
@@ -52,7 +52,7 @@ class TestKubernetesDisasterRecovery:
             yield {
                 "pod_name": "postgres-test-disaster",
                 "namespace": "default",
-                "mocked": True
+                "mocked": True,
             }
             return
 
@@ -62,7 +62,7 @@ class TestKubernetesDisasterRecovery:
                 ["kubectl", "version", "--client"],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
             if result.returncode != 0:
                 pytest.skip("kubectl no está disponible")
@@ -72,10 +72,7 @@ class TestKubernetesDisasterRecovery:
         # Verificar conectividad al cluster
         try:
             result = subprocess.run(
-                ["kubectl", "get", "nodes"],
-                capture_output=True,
-                timeout=15,
-                text=True
+                ["kubectl", "get", "nodes"], capture_output=True, timeout=15, text=True
             )
             if result.returncode != 0:
                 pytest.skip("No hay conexión a cluster Kubernetes")
@@ -101,7 +98,7 @@ class TestKubernetesDisasterRecovery:
                 "pod_name": pod_name,
                 "namespace": namespace,
                 "manifest_file": manifest_file,
-                "mocked": False
+                "mocked": False,
             }
         finally:
             # Cleanup
@@ -115,7 +112,7 @@ class TestKubernetesDisasterRecovery:
             subprocess.run(
                 ["kubectl", "delete", "pod", pod_name, "-n", namespace],
                 capture_output=True,
-                timeout=30
+                timeout=30,
             )
             time.sleep(5)
         except subprocess.TimeoutExpired:
@@ -164,7 +161,7 @@ spec:
 """
 
         # Escribir manifest temporal
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(pod_manifest)
             manifest_file = f.name
 
@@ -173,41 +170,58 @@ spec:
             ["kubectl", "apply", "-f", manifest_file],
             capture_output=True,
             timeout=30,
-            text=True
+            text=True,
         )
         if result.returncode != 0:
             pytest.skip(f"No se pudo crear pod: {result.stderr}")
 
         return manifest_file
 
-    def _wait_for_pod_ready(self, pod_name: str, namespace: str, max_attempts: int = 30) -> bool:
+    def _wait_for_pod_ready(
+        self, pod_name: str, namespace: str, max_attempts: int = 30
+    ) -> bool:
         """Helper para esperar que el pod esté listo"""
         for attempt in range(max_attempts):
             try:
                 # Verificar estado del pod
                 result = subprocess.run(
                     [
-                        "kubectl", "get", "pod", pod_name, "-n", namespace,
-                        "-o", "jsonpath={.status.phase}"
+                        "kubectl",
+                        "get",
+                        "pod",
+                        pod_name,
+                        "-n",
+                        namespace,
+                        "-o",
+                        "jsonpath={.status.phase}",
                     ],
                     capture_output=True,
                     timeout=10,
-                    text=True
+                    text=True,
                 )
 
                 if result.returncode == 0 and result.stdout.strip() == "Running":
                     # Verificar que el contenedor esté ready
                     ready_result = subprocess.run(
                         [
-                            "kubectl", "get", "pod", pod_name, "-n", namespace,
-                            "-o", "jsonpath={.status.containerStatuses[0].ready}"
+                            "kubectl",
+                            "get",
+                            "pod",
+                            pod_name,
+                            "-n",
+                            namespace,
+                            "-o",
+                            "jsonpath={.status.containerStatuses[0].ready}",
                         ],
                         capture_output=True,
                         timeout=10,
-                        text=True
+                        text=True,
                     )
 
-                    if ready_result.returncode == 0 and ready_result.stdout.strip() == "true":
+                    if (
+                        ready_result.returncode == 0
+                        and ready_result.stdout.strip() == "true"
+                    ):
                         # Dar tiempo adicional para PostgreSQL
                         time.sleep(10)
                         return True
@@ -218,8 +232,10 @@ spec:
 
         return False
 
-    @patch('tests.e2e.disaster_recovery.VolumeDestroyer')
-    def test_kubernetes_pvc_destruction_simulation(self, mock_destroyer, kubernetes_environment):
+    @patch("tests.e2e.disaster_recovery.VolumeDestroyer")
+    def test_kubernetes_pvc_destruction_simulation(
+        self, mock_destroyer, kubernetes_environment
+    ):
         """
         Test de simulación de destrucción de PVC en Kubernetes
         """
@@ -235,12 +251,12 @@ spec:
             "recoverable": True,
             "timestamp": "2023-01-01T12:00:00Z",
             "affected_resources": ["pvc", "pod"],
-            "severity": "high"
+            "severity": "high",
         }
         mock_destroyer_instance.get_destruction_summary.return_value = {
             "total_volumes_destroyed": 1,
             "total_pods_affected": 1,
-            "recovery_time_estimate": 300
+            "recovery_time_estimate": 300,
         }
         mock_destroyer.return_value = mock_destroyer_instance
 
@@ -262,8 +278,10 @@ spec:
         assert summary["total_volumes_destroyed"] >= 1
         assert "recovery_time_estimate" in summary
 
-    @patch('tests.e2e.disaster_recovery.DataCorruptor')
-    def test_kubernetes_data_corruption_simulation(self, mock_corruptor, kubernetes_environment):
+    @patch("tests.e2e.disaster_recovery.DataCorruptor")
+    def test_kubernetes_data_corruption_simulation(
+        self, mock_corruptor, kubernetes_environment
+    ):
         """
         Test de simulación de corrupción de datos en Kubernetes
         """
@@ -280,12 +298,12 @@ spec:
             "severity": "critical",
             "affected_tables": ["users", "orders"],
             "corruption_type": "schema_damage",
-            "estimated_data_loss": "25%"
+            "estimated_data_loss": "25%",
         }
         mock_corruptor_instance.get_corruption_summary.return_value = {
             "total_corruptions": 1,
             "corruption_types": ["table_drop"],
-            "recovery_complexity": "high"
+            "recovery_complexity": "high",
         }
         mock_corruptor.return_value = mock_corruptor_instance
 
@@ -296,7 +314,11 @@ spec:
 
         # Verificar resultados
         assert result["success"] is True
-        assert result["disaster_type"] in ["table_drop", "data_scramble", "index_corruption"]
+        assert result["disaster_type"] in [
+            "table_drop",
+            "data_scramble",
+            "index_corruption",
+        ]
         assert result["target"] == pod_name
         assert result["recoverable"] is True
         assert "severity" in result
@@ -306,7 +328,7 @@ spec:
         summary = corruptor.get_corruption_summary()
         assert summary["total_corruptions"] >= 1
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
     def test_kubernetes_rto_monitoring(self, mock_rto_monitor, kubernetes_environment):
         """
         Test de monitoreo RTO en entorno Kubernetes
@@ -325,14 +347,14 @@ spec:
             "duration": 45.5,
             "rto_met": True,
             "target_rto": 180,
-            "performance_score": 95.2
+            "performance_score": 95.2,
         }
         mock_monitor_instance.get_rto_metrics.return_value = {
             "total_sessions": 1,
             "rto_compliance_rate": 100.0,
             "average_recovery_time": 45.5,
             "fastest_recovery": 45.5,
-            "slowest_recovery": 45.5
+            "slowest_recovery": 45.5,
         }
         mock_rto_monitor.return_value = mock_monitor_instance
 
@@ -361,8 +383,10 @@ spec:
         assert metrics["total_sessions"] >= 1
         assert metrics["rto_compliance_rate"] >= 0
 
-    @patch('tests.e2e.disaster_recovery.FullRecoveryTest')
-    def test_kubernetes_full_recovery_workflow(self, mock_recovery_test, kubernetes_environment):
+    @patch("tests.e2e.disaster_recovery.FullRecoveryTest")
+    def test_kubernetes_full_recovery_workflow(
+        self, mock_recovery_test, kubernetes_environment
+    ):
         """
         Test completo de workflow de recuperación en Kubernetes
         """
@@ -383,7 +407,7 @@ spec:
             "rto_result": {"duration": 120.3, "rto_met": True},
             "validation_result": {"data_integrity": 100, "success": True},
             "overall_success": True,
-            "lessons_learned": ["PVC recovery faster than expected"]
+            "lessons_learned": ["PVC recovery faster than expected"],
         }
         mock_recovery_test.return_value = mock_test_instance
 
@@ -394,10 +418,17 @@ spec:
 
         # Verificar estructura del resultado
         required_fields = [
-            "test_id", "environment", "target", "test_duration",
-            "initial_data", "backup_result", "disaster_result",
-            "recovery_result", "rto_result", "validation_result",
-            "overall_success"
+            "test_id",
+            "environment",
+            "target",
+            "test_duration",
+            "initial_data",
+            "backup_result",
+            "disaster_result",
+            "recovery_result",
+            "rto_result",
+            "validation_result",
+            "overall_success",
         ]
 
         for field in required_fields:
@@ -424,12 +455,18 @@ spec:
         # Verificar estado inicial
         result = subprocess.run(
             [
-                "kubectl", "get", "pod", pod_name, "-n", namespace,
-                "-o", "jsonpath={.status.phase}"
+                "kubectl",
+                "get",
+                "pod",
+                pod_name,
+                "-n",
+                namespace,
+                "-o",
+                "jsonpath={.status.phase}",
             ],
             capture_output=True,
             timeout=10,
-            text=True
+            text=True,
         )
 
         if result.returncode == 0:
@@ -453,8 +490,10 @@ spec:
         assert namespace in target_with_namespace
         assert pod_name in target_with_namespace
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
-    def test_kubernetes_rto_comparison_with_docker(self, mock_rto_monitor, kubernetes_environment):
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
+    def test_kubernetes_rto_comparison_with_docker(
+        self, mock_rto_monitor, kubernetes_environment
+    ):
         """
         Test comparativo de RTO entre K8s y Docker
         """
@@ -472,13 +511,11 @@ spec:
             mock_monitor_instance.stop_recovery_timer.return_value = {
                 "session_id": session_id,
                 "duration": duration,
-                "rto_met": duration < 300
+                "rto_met": duration < 300,
             }
-            results.append({
-                "session_id": session_id,
-                "duration": duration,
-                "rto_met": True
-            })
+            results.append(
+                {"session_id": session_id, "duration": duration, "rto_met": True}
+            )
 
         mock_rto_monitor.return_value = mock_monitor_instance
         k8s_monitor = mock_rto_monitor(target_rto_seconds=300)
@@ -518,7 +555,7 @@ spec:
                 ["kubectl", "exec", pod_name, "-n", namespace, "--", "echo", "test"],
                 capture_output=True,
                 timeout=30,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
@@ -526,10 +563,12 @@ spec:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("kubectl exec no disponible")
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
-    @patch('tests.e2e.disaster_recovery.RTOAnalyzer')
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
+    @patch("tests.e2e.disaster_recovery.RTOAnalyzer")
     @pytest.mark.slow
-    def test_kubernetes_disaster_recovery_stress(self, mock_analyzer, mock_rto_monitor, kubernetes_environment):
+    def test_kubernetes_disaster_recovery_stress(
+        self, mock_analyzer, mock_rto_monitor, kubernetes_environment
+    ):
         """
         Test de stress para disaster recovery en K8s
         """
@@ -552,14 +591,18 @@ spec:
             duration = 60 + (i * 10)  # Varying durations
             rto_met = duration < 120
 
-            session_results.append({
-                "session_id": session_id,
-                "duration": duration,
-                "rto_met": rto_met,
-                "disaster_type": disaster_types[i % 2]
-            })
+            session_results.append(
+                {
+                    "session_id": session_id,
+                    "duration": duration,
+                    "rto_met": rto_met,
+                    "disaster_type": disaster_types[i % 2],
+                }
+            )
 
-        mock_monitor_instance.start_recovery_timer.side_effect = [r["session_id"] for r in session_results]
+        mock_monitor_instance.start_recovery_timer.side_effect = [
+            r["session_id"] for r in session_results
+        ]
         mock_monitor_instance.stop_recovery_timer.side_effect = session_results
 
         mock_analyzer_instance.analyze_rto_performance.return_value = {
@@ -568,10 +611,12 @@ spec:
             "compliance_rate": 83.3,
             "disaster_type_analysis": {
                 "pvc_deletion": {"sessions": 3, "avg_duration": 70},
-                "data_corruption": {"sessions": 3, "avg_duration": 80}
-            }
+                "data_corruption": {"sessions": 3, "avg_duration": 80},
+            },
         }
-        mock_analyzer_instance.generate_rto_report.return_value = "REPORTE DE ANÁLISIS RTO\n======================\nTotal: 6 sesiones"
+        mock_analyzer_instance.generate_rto_report.return_value = (
+            "REPORTE DE ANÁLISIS RTO\n======================\nTotal: 6 sesiones"
+        )
 
         mock_rto_monitor.return_value = mock_monitor_instance
         mock_analyzer.return_value = mock_analyzer_instance
@@ -619,7 +664,7 @@ spec:
                 ["kubectl", "get", "pod", invalid_pod_name],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
             # El comando debe fallar, pero no debe hacer crash del test
             assert result.returncode != 0
@@ -644,12 +689,18 @@ spec:
         try:
             result = subprocess.run(
                 [
-                    "kubectl", "get", "pod", pod_name, "-n", namespace,
-                    "-o", "jsonpath={.spec.containers[0].resources}"
+                    "kubectl",
+                    "get",
+                    "pod",
+                    pod_name,
+                    "-n",
+                    namespace,
+                    "-o",
+                    "jsonpath={.spec.containers[0].resources}",
                 ],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
@@ -676,8 +727,10 @@ spec:
         assert pod_info["pod_name"] == "postgres-test-disaster"
         assert pod_info["namespace"] == "default"
 
-    @patch('subprocess.run')
-    def test_kubernetes_kubectl_error_handling(self, mock_subprocess, kubernetes_environment):
+    @patch("subprocess.run")
+    def test_kubernetes_kubectl_error_handling(
+        self, mock_subprocess, kubernetes_environment
+    ):
         """
         Test de manejo de errores de kubectl
         """

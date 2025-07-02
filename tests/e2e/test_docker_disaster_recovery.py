@@ -15,8 +15,8 @@ pytestmark = [
     pytest.mark.e2e,
     pytest.mark.skipif(
         "GITHUB_ACTIONS" in os.environ,
-        reason="E2E tests requieren Docker daemon no disponible en CI"
-    )
+        reason="E2E tests requieren Docker daemon no disponible en CI",
+    ),
 ]
 
 try:
@@ -48,19 +48,13 @@ class TestDockerDisasterRecovery:
         """
         # Mock environment si estamos en CI
         if "GITHUB_ACTIONS" in os.environ:
-            yield {
-                "container_name": "postgres_test_disaster",
-                "mocked": True
-            }
+            yield {"container_name": "postgres_test_disaster", "mocked": True}
             return
 
         # Verificar que Docker esté corriendo
         try:
             result = subprocess.run(
-                ["docker", "ps"],
-                capture_output=True,
-                timeout=10,
-                text=True
+                ["docker", "ps"], capture_output=True, timeout=10, text=True
             )
             if result.returncode != 0:
                 pytest.skip("Docker no está disponible")
@@ -82,10 +76,7 @@ class TestDockerDisasterRecovery:
             if not self._wait_for_container_ready(container_name):
                 pytest.skip("Contenedor no alcanzó estado Running")
 
-            yield {
-                "container_name": container_name,
-                "mocked": False
-            }
+            yield {"container_name": container_name, "mocked": False}
         finally:
             # Cleanup
             self._cleanup_container(container_name)
@@ -94,14 +85,10 @@ class TestDockerDisasterRecovery:
         """Helper para limpiar contenedores"""
         try:
             subprocess.run(
-                ["docker", "stop", container_name],
-                capture_output=True,
-                timeout=30
+                ["docker", "stop", container_name], capture_output=True, timeout=30
             )
             subprocess.run(
-                ["docker", "rm", container_name],
-                capture_output=True,
-                timeout=30
+                ["docker", "rm", container_name], capture_output=True, timeout=30
             )
             time.sleep(2)
         except subprocess.TimeoutExpired:
@@ -110,14 +97,22 @@ class TestDockerDisasterRecovery:
     def _create_test_container(self, container_name: str) -> bool:
         """Helper para crear contenedor de prueba"""
         cmd = [
-            "docker", "run", "-d",
-            "--name", container_name,
-            "-e", "POSTGRES_USER=postgres",
-            "-e", "POSTGRES_PASSWORD=test123",
-            "-e", "POSTGRES_DB=test_db",
-            "--memory", "256m",
-            "--cpus", "0.5",
-            "postgres:15"
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            container_name,
+            "-e",
+            "POSTGRES_USER=postgres",
+            "-e",
+            "POSTGRES_PASSWORD=test123",
+            "-e",
+            "POSTGRES_DB=test_db",
+            "--memory",
+            "256m",
+            "--cpus",
+            "0.5",
+            "postgres:15",
         ]
 
         try:
@@ -126,27 +121,41 @@ class TestDockerDisasterRecovery:
         except subprocess.TimeoutExpired:
             return False
 
-    def _wait_for_container_ready(self, container_name: str, max_attempts: int = 20) -> bool:
+    def _wait_for_container_ready(
+        self, container_name: str, max_attempts: int = 20
+    ) -> bool:
         """Helper para esperar que el contenedor esté listo"""
         for attempt in range(max_attempts):
             try:
                 # Verificar estado del contenedor
                 result = subprocess.run(
-                    ["docker", "inspect", container_name, "--format", "{{.State.Status}}"],
+                    [
+                        "docker",
+                        "inspect",
+                        container_name,
+                        "--format",
+                        "{{.State.Status}}",
+                    ],
                     capture_output=True,
                     timeout=10,
-                    text=True
+                    text=True,
                 )
 
                 if result.returncode == 0 and result.stdout.strip() == "running":
                     # Verificar que PostgreSQL esté aceptando conexiones
                     health_check = subprocess.run(
                         [
-                            "docker", "exec", container_name,
-                            "pg_isready", "-U", "postgres", "-d", "test_db"
+                            "docker",
+                            "exec",
+                            container_name,
+                            "pg_isready",
+                            "-U",
+                            "postgres",
+                            "-d",
+                            "test_db",
                         ],
                         capture_output=True,
-                        timeout=10
+                        timeout=10,
                     )
 
                     if health_check.returncode == 0:
@@ -159,8 +168,10 @@ class TestDockerDisasterRecovery:
 
         return False
 
-    @patch('tests.e2e.disaster_recovery.VolumeDestroyer')
-    def test_docker_volume_destruction_simulation(self, mock_destroyer, docker_environment):
+    @patch("tests.e2e.disaster_recovery.VolumeDestroyer")
+    def test_docker_volume_destruction_simulation(
+        self, mock_destroyer, docker_environment
+    ):
         """
         Test de simulación de destrucción de volúmenes Docker
         """
@@ -177,13 +188,13 @@ class TestDockerDisasterRecovery:
             "timestamp": "2023-01-01T12:00:00Z",
             "affected_volumes": [f"{container_name}_data"],
             "severity": "high",
-            "estimated_recovery_time": 120
+            "estimated_recovery_time": 120,
         }
         mock_destroyer_instance.get_destruction_summary.return_value = {
             "total_volumes_destroyed": 1,
             "destroyed_volumes": [f"{container_name}_data"],
             "total_containers_affected": 1,
-            "recovery_time_estimate": 120
+            "recovery_time_estimate": 120,
         }
         mock_destroyer.return_value = mock_destroyer_instance
 
@@ -207,8 +218,10 @@ class TestDockerDisasterRecovery:
         assert len(summary["destroyed_volumes"]) >= 1
         assert "recovery_time_estimate" in summary
 
-    @patch('tests.e2e.disaster_recovery.DataCorruptor')
-    def test_docker_data_corruption_simulation(self, mock_corruptor, docker_environment):
+    @patch("tests.e2e.disaster_recovery.DataCorruptor")
+    def test_docker_data_corruption_simulation(
+        self, mock_corruptor, docker_environment
+    ):
         """
         Test de simulación de corrupción de datos en Docker
         """
@@ -226,7 +239,7 @@ class TestDockerDisasterRecovery:
             "affected_tables": ["users", "orders", "products"],
             "corruption_type": "schema_damage",
             "estimated_data_loss": "15%",
-            "recovery_complexity": "medium"
+            "recovery_complexity": "medium",
         }
         mock_corruptor_instance.get_corruption_summary.return_value = {
             "total_corruptions": 1,
@@ -234,7 +247,7 @@ class TestDockerDisasterRecovery:
                 {"type": "table", "name": "users", "corruption": "dropped"}
             ],
             "corruption_types": ["table_drop"],
-            "severity_distribution": {"critical": 1}
+            "severity_distribution": {"critical": 1},
         }
         mock_corruptor.return_value = mock_corruptor_instance
 
@@ -246,7 +259,9 @@ class TestDockerDisasterRecovery:
         # Verificar resultados
         assert result["success"] is True
         assert result["disaster_type"] in [
-            "table_drop", "data_scramble", "index_corruption"
+            "table_drop",
+            "data_scramble",
+            "index_corruption",
         ]
         assert result["target"] == container_name
         assert result["recoverable"] is True
@@ -260,7 +275,7 @@ class TestDockerDisasterRecovery:
         assert len(summary["corrupted_objects"]) == 1
         assert "corruption_types" in summary
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
     def test_docker_rto_monitoring(self, mock_rto_monitor, docker_environment):
         """
         Test de monitoreo RTO en entorno Docker
@@ -280,7 +295,7 @@ class TestDockerDisasterRecovery:
             "rto_met": True,
             "target_rto": 120,
             "performance_score": 98.7,
-            "environment": "docker"
+            "environment": "docker",
         }
         mock_monitor_instance.get_rto_metrics.return_value = {
             "total_sessions": 1,
@@ -289,14 +304,16 @@ class TestDockerDisasterRecovery:
             "average_recovery_time": 25.5,
             "fastest_recovery": 25.5,
             "slowest_recovery": 25.5,
-            "environment": "docker"
+            "environment": "docker",
         }
         mock_rto_monitor.return_value = mock_monitor_instance
 
         rto_monitor = mock_rto_monitor(target_rto_seconds=120)
 
         # Iniciar monitoreo
-        session_id_result = rto_monitor.start_recovery_timer("volume_deletion", container_name)
+        session_id_result = rto_monitor.start_recovery_timer(
+            "volume_deletion", container_name
+        )
         assert session_id_result == session_id
 
         # Simular trabajo de recuperación
@@ -319,8 +336,10 @@ class TestDockerDisasterRecovery:
         assert metrics["rto_compliance_rate"] >= 0
         assert "average_recovery_time" in metrics
 
-    @patch('tests.e2e.disaster_recovery.FullRecoveryTest')
-    def test_docker_full_recovery_workflow(self, mock_recovery_test, docker_environment):
+    @patch("tests.e2e.disaster_recovery.FullRecoveryTest")
+    def test_docker_full_recovery_workflow(
+        self, mock_recovery_test, docker_environment
+    ):
         """
         Test completo de workflow de recuperación en Docker
         """
@@ -339,30 +358,30 @@ class TestDockerDisasterRecovery:
                 "success": True,
                 "backup_size": "25MB",
                 "backup_time": 15.2,
-                "backup_path": f"/backups/{container_name}_backup.sql"
+                "backup_path": f"/backups/{container_name}_backup.sql",
             },
             "disaster_result": {
                 "success": True,
                 "disaster_type": "volume_deletion",
-                "impact_level": "total"
+                "impact_level": "total",
             },
             "recovery_result": {
                 "success": True,
                 "recovery_time": 65.8,
-                "data_restored": "100%"
+                "data_restored": "100%",
             },
             "rto_result": {"duration": 65.8, "rto_met": True, "target_rto": 120},
             "validation_result": {
                 "data_integrity": 100,
                 "success": True,
                 "validated_tables": 3,
-                "validated_records": 500
+                "validated_records": 500,
             },
             "overall_success": True,
             "lessons_learned": [
                 "Docker containers recover faster than K8s pods",
-                "Volume mounts critical for data persistence"
-            ]
+                "Volume mounts critical for data persistence",
+            ],
         }
         mock_recovery_test.return_value = mock_test_instance
 
@@ -373,10 +392,17 @@ class TestDockerDisasterRecovery:
 
         # Verificar estructura del resultado
         required_fields = [
-            "test_id", "environment", "target", "test_duration",
-            "initial_data", "backup_result", "disaster_result",
-            "recovery_result", "rto_result", "validation_result",
-            "overall_success"
+            "test_id",
+            "environment",
+            "target",
+            "test_duration",
+            "initial_data",
+            "backup_result",
+            "disaster_result",
+            "recovery_result",
+            "rto_result",
+            "validation_result",
+            "overall_success",
         ]
 
         for field in required_fields:
@@ -392,7 +418,7 @@ class TestDockerDisasterRecovery:
         assert result["recovery_result"]["success"] is True
         assert result["validation_result"]["success"] is True
 
-    @patch('tests.e2e.disaster_recovery.RTOAnalyzer')
+    @patch("tests.e2e.disaster_recovery.RTOAnalyzer")
     def test_docker_rto_analysis(self, mock_analyzer, docker_environment):
         """
         Test de análisis avanzado de RTO en Docker
@@ -410,24 +436,24 @@ class TestDockerDisasterRecovery:
                 "median": 14.8,
                 "std_dev": 2.1,
                 "min": 13.1,
-                "max": 18.5
+                "max": 18.5,
             },
             "performance_categories": {
                 "excellent": 3,
                 "good": 0,
                 "acceptable": 0,
-                "poor": 0
+                "poor": 0,
             },
             "rto_compliance_rate": 100.0,
             "disaster_type_analysis": {
                 "test_0": {"sessions": 1, "avg_duration": 13.1},
                 "test_1": {"sessions": 1, "avg_duration": 14.8},
-                "test_2": {"sessions": 1, "avg_duration": 18.5}
+                "test_2": {"sessions": 1, "avg_duration": 18.5},
             },
             "recommendations": [
                 "Excellent performance across all test types",
-                "Consider reducing target RTO to 30 seconds"
-            ]
+                "Consider reducing target RTO to 30 seconds",
+            ],
         }
         mock_analyzer_instance.generate_rto_report.return_value = """REPORTE DE ANÁLISIS RTO
 ======================
@@ -451,7 +477,7 @@ RECOMENDACIONES:
         mock_rto_monitor.sessions = [
             {"duration": 13.1, "disaster_type": "test_0"},
             {"duration": 14.8, "disaster_type": "test_1"},
-            {"duration": 18.5, "disaster_type": "test_2"}
+            {"duration": 18.5, "disaster_type": "test_2"},
         ]
         mock_rto_monitor.target_rto_seconds = 60
 
@@ -475,9 +501,11 @@ RECOMENDACIONES:
         assert "MÉTRICAS GENERALES" in report
         assert "RECOMENDACIONES" in report
 
-    @patch('tests.e2e.disaster_recovery.VolumeDestroyer')
-    @patch('tests.e2e.disaster_recovery.DataCorruptor')
-    def test_docker_multiple_disaster_types(self, mock_corruptor, mock_destroyer, docker_environment):
+    @patch("tests.e2e.disaster_recovery.VolumeDestroyer")
+    @patch("tests.e2e.disaster_recovery.DataCorruptor")
+    def test_docker_multiple_disaster_types(
+        self, mock_corruptor, mock_destroyer, docker_environment
+    ):
         """
         Test de múltiples tipos de desastre en secuencia
         """
@@ -489,11 +517,11 @@ RECOMENDACIONES:
         mock_destroyer_instance.simulate_disaster.return_value = {
             "success": True,
             "disaster_type": "volume_deletion",
-            "target": container_name
+            "target": container_name,
         }
         mock_destroyer_instance.get_destruction_summary.return_value = {
             "total_volumes_destroyed": 1,
-            "destroyed_volumes": [f"{container_name}_data"]
+            "destroyed_volumes": [f"{container_name}_data"],
         }
         mock_destroyer.return_value = mock_destroyer_instance
 
@@ -502,11 +530,11 @@ RECOMENDACIONES:
         mock_corruptor_instance.simulate_disaster.return_value = {
             "success": True,
             "disaster_type": "table_drop",
-            "target": container_name
+            "target": container_name,
         }
         mock_corruptor_instance.get_corruption_summary.return_value = {
             "total_corruptions": 1,
-            "corrupted_objects": [{"type": "table", "name": "users"}]
+            "corrupted_objects": [{"type": "table", "name": "users"}],
         }
         mock_corruptor.return_value = mock_corruptor_instance
 
@@ -532,7 +560,7 @@ RECOMENDACIONES:
         # Verificar tipos de desastre diferentes
         assert vol_result["disaster_type"] != corr_result["disaster_type"]
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
     @pytest.mark.slow
     def test_docker_performance_benchmark(self, mock_rto_monitor, docker_environment):
         """
@@ -554,25 +582,33 @@ RECOMENDACIONES:
             for i in range(5):  # 5 iteraciones por tipo
                 session_id = f"benchmark-session-{session_counter}"
                 # Volume deletion más rápido que data corruption
-                duration = 0.5 + (i * 0.1) if disaster_type == "volume_deletion" else 1.5 + (i * 0.2)
+                duration = (
+                    0.5 + (i * 0.1)
+                    if disaster_type == "volume_deletion"
+                    else 1.5 + (i * 0.2)
+                )
                 rto_met = duration < 30
 
-                session_results.append({
-                    "session_id": session_id,
-                    "disaster_type": disaster_type,
-                    "target": container_name,
-                    "duration": duration,
-                    "rto_met": rto_met
-                })
+                session_results.append(
+                    {
+                        "session_id": session_id,
+                        "disaster_type": disaster_type,
+                        "target": container_name,
+                        "duration": duration,
+                        "rto_met": rto_met,
+                    }
+                )
                 session_counter += 1
 
-        mock_monitor_instance.start_recovery_timer.side_effect = [r["session_id"] for r in session_results]
+        mock_monitor_instance.start_recovery_timer.side_effect = [
+            r["session_id"] for r in session_results
+        ]
         mock_monitor_instance.stop_recovery_timer.side_effect = session_results
         mock_monitor_instance.get_rto_metrics.return_value = {
             "total_sessions": 10,
             "target_rto": 30,
             "rto_compliance_rate": 100.0,
-            "average_recovery_time": 1.15
+            "average_recovery_time": 1.15,
         }
         mock_rto_monitor.return_value = mock_monitor_instance
 
@@ -582,7 +618,9 @@ RECOMENDACIONES:
         session_count = 0
         for disaster_type in disaster_types:
             for i in range(5):  # 5 iteraciones por tipo
-                session_id = rto_monitor.start_recovery_timer(disaster_type, container_name)
+                session_id = rto_monitor.start_recovery_timer(
+                    disaster_type, container_name
+                )
 
                 # Simular diferentes duraciones mínimas
                 time.sleep(0.01)  # Minimal sleep for test
@@ -614,7 +652,7 @@ RECOMENDACIONES:
                 ["docker", "inspect", container_name, "--format", "{{.State.Status}}"],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
@@ -638,17 +676,29 @@ RECOMENDACIONES:
         # Verificar límites de memoria y CPU
         try:
             memory_result = subprocess.run(
-                ["docker", "inspect", container_name, "--format", "{{.HostConfig.Memory}}"],
+                [
+                    "docker",
+                    "inspect",
+                    container_name,
+                    "--format",
+                    "{{.HostConfig.Memory}}",
+                ],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
 
             cpu_result = subprocess.run(
-                ["docker", "inspect", container_name, "--format", "{{.HostConfig.CpuQuota}}"],
+                [
+                    "docker",
+                    "inspect",
+                    container_name,
+                    "--format",
+                    "{{.HostConfig.CpuQuota}}",
+                ],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
 
             if memory_result.returncode == 0 and cpu_result.returncode == 0:
@@ -661,7 +711,7 @@ RECOMENDACIONES:
         except subprocess.TimeoutExpired:
             pytest.skip("No se pudo verificar límites de recursos")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_docker_error_handling(self, mock_subprocess, docker_environment):
         """
         Test de manejo de errores específicos de Docker
@@ -717,7 +767,7 @@ RECOMENDACIONES:
                 ["docker", "inspect", container_name, "--format", "{{.Mounts}}"],
                 capture_output=True,
                 timeout=10,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
@@ -745,7 +795,7 @@ RECOMENDACIONES:
                 ["docker", "exec", container_name, "echo", "connectivity_test"],
                 capture_output=True,
                 timeout=15,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
@@ -753,7 +803,7 @@ RECOMENDACIONES:
         except subprocess.TimeoutExpired:
             pytest.skip("No se pudo verificar conectividad")
 
-    @patch('tests.e2e.disaster_recovery.RTOMonitor')
+    @patch("tests.e2e.disaster_recovery.RTOMonitor")
     def test_docker_rto_edge_cases(self, mock_rto_monitor, docker_environment):
         """
         Test de casos edge para RTO monitoring
@@ -772,7 +822,7 @@ RECOMENDACIONES:
             "target": container_name,
             "duration": 150.0,  # Mayor que RTO
             "rto_met": False,
-            "target_rto": 120
+            "target_rto": 120,
         }
         mock_rto_monitor.return_value = mock_monitor_instance
 
@@ -808,7 +858,7 @@ RECOMENDACIONES:
                     ["docker", "exec", container_name] + cmd.split(),
                     capture_output=True,
                     timeout=10,
-                    text=True
+                    text=True,
                 )
 
                 if result.returncode == 0:
