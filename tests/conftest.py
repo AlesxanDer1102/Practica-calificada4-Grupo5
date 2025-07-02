@@ -92,6 +92,7 @@ def orchestrator_instance(temp_backup_dir):
                 "slack_token": None,
                 "slack_channel": None,
                 "list_schedules": False,
+                "apply_encryption": False,
                 "remove_schedule": None,
                 "test_notifications": False,
             },

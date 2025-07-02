@@ -49,6 +49,7 @@ def create_k8s_test_config(backup_dir, pod_name="postgres-0", namespace="default
                 "apply_retention": False,
                 "retention_dry_run": False,
                 "backup_summary": False,
+                "apply_encryption": False,
                 "schedule": None,
                 "schedule_custom": None,
                 "schedule_prefix": "auto",

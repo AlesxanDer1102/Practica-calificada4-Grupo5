@@ -1,6 +1,7 @@
 import json
 import logging
 import subprocess
+import os
 from typing import Any, Dict, List, Optional
 
 
@@ -194,3 +195,35 @@ class DockerHandler:
         except Exception as e:
             self.logger.error(f"Error al obtener información del contenedor: {e}")
             return None
+
+    def _encrypt_backup(self, backup_path):
+        """
+        Encriptar usando OpenSSL
+        """
+        password_file = os.getenv(
+            "ENCRYPTION_PASSWORD_FILE", "./scripts/secure/backup_key.txt"
+        )
+        encrypted_path = f"{backup_path}.enc"
+
+        if not os.path.exists(password_file):
+            print(f"Error: No se encontro el archivo de contraseña en {password_file}")
+            return None
+
+        comando = [
+            "openssl",
+            "enc",
+            "-aes-256-cbc",
+            "-salt",
+            "-pbkdf2",
+            "-iter",
+            "100000",
+            "-in",
+            backup_path,
+            "-out",
+            encrypted_path,
+            "-pass",
+            f"file:{password_file}",
+        ]
+
+        result = subprocess.run(comando, capture_output=True, text=True)
+        return encrypted_path if result.returncode == 0 else None
