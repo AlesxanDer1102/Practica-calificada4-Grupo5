@@ -92,7 +92,6 @@ jobs:
           print("No se encontraron emojis.")
           EOF
 
-
   backup:
     needs: test
     runs-on: ubuntu-latest
@@ -130,3 +129,27 @@ jobs:
         with:
           name: backups-${{ github.run_id }}
           path: backups/*
+
+deploy:
+  needs: [test, backup]
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/master'
+
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Build backend image
+      run: docker build -f k8s/backend/Dockerfile -t miapp:dev .
+
+    - name: Fake docker push
+      run: echo "Pushing image to Docker Hub (simulacion para evitar fallos)"
+
+    - name: Instalar kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: "latest"
+
+    - name: Deploy to Kubernetes
+      env:
+        KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      run: echo "kubectl apply -f k8s/backend"
