@@ -144,7 +144,7 @@ class TestK8sIntegration:
             ) as mock_resolve:
                 backup_filename = "backup_20250702_220155_full.sql"
                 mock_resolve.return_value = (backup_filename, False)
-                
+
                 # Create the backup file in the temp directory
                 backup_path = temp_backup_dir / backup_filename
                 backup_path.write_text(backup_content)
@@ -161,7 +161,7 @@ class TestK8sIntegration:
                 # For K8s, pg_dump is wrapped in shell command with env vars
                 call_string = " ".join(call_args)
                 assert "pg_dump" in call_string
-                
+
                 # Verify the backup file was created
                 assert backup_path.exists()
                 assert backup_path.stat().st_size > 0
@@ -296,7 +296,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         ) as mock_resolve:
             backup_filename = "integration_test_20250702_220155.sql"
             mock_resolve.return_value = (backup_filename, False)
-            
+
             # Create the backup file in the temp directory
             backup_path = temp_backup_dir / backup_filename
             backup_path.write_text(backup_content)
@@ -305,7 +305,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
                 custom_name="integration_test"
             )
             assert backup_result is True
-            
+
             # Verify the backup file was created
             assert backup_path.exists()
             assert backup_path.stat().st_size > 0

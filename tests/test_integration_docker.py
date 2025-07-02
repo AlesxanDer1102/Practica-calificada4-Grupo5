@@ -139,7 +139,7 @@ class TestDockerIntegration:
                 # Generate a specific backup filename
                 backup_filename = "backup_20250702_220154_full.sql"
                 mock_resolve.return_value = (backup_filename, False)
-                
+
                 # Create the backup file in the temp directory
                 backup_path = temp_backup_dir / backup_filename
                 backup_path.write_text(backup_content)
@@ -154,7 +154,7 @@ class TestDockerIntegration:
                 assert "exec" in call_args
                 assert "postgres_container" in call_args
                 assert "pg_dump" in call_args
-                
+
                 # Verify the backup file was created and has content
                 assert backup_path.exists()
                 assert backup_path.stat().st_size > 0
@@ -260,7 +260,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
         """Test que verifica la estrategia de backup incremental en Docker"""
         existing_backup = temp_backup_dir / "backup_full_20240101.sql"
         existing_backup.write_text("-- Full backup content")
-        
+
         backup_content = "-- Incremental backup content"
 
         with patch("subprocess.run") as mock_run:
@@ -276,7 +276,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
                 ) as mock_resolve:
                     backup_filename = "backup_20250702_220154_incremental.sql"
                     mock_resolve.return_value = (backup_filename, False)
-                    
+
                     # Create the backup file in the temp directory
                     backup_path = temp_backup_dir / backup_filename
                     backup_path.write_text(backup_content)
@@ -285,7 +285,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
 
                     assert result is True
                     mock_run.assert_called()
-                    
+
                     # Verify the backup file was created
                     assert backup_path.exists()
                     assert backup_path.stat().st_size > 0
@@ -351,7 +351,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
             ) as mock_resolve:
                 backup_filename = "integration_test_20250702_220154.sql"
                 mock_resolve.return_value = (backup_filename, False)
-                
+
                 # Create the backup file in the temp directory
                 backup_path = temp_backup_dir / backup_filename
                 backup_path.write_text(backup_content)
@@ -360,7 +360,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
                     custom_name="integration_test"
                 )
                 assert backup_result is True
-                
+
                 # Verify the backup file was created
                 assert backup_path.exists()
                 assert backup_path.stat().st_size > 0
@@ -438,7 +438,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
 
         # Simular intentos de backup concurrentes
         backup_content = "-- Concurrent backup content"
-        
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stderr="", stdout=backup_content)
 
@@ -451,11 +451,11 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
                 with patch(
                     "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
                 ) as mock_resolve:
-                    
+
                     # First backup
                     backup_filename_1 = "concurrent_test_1_20250702_220154.sql"
                     mock_resolve.return_value = (backup_filename_1, False)
-                    
+
                     backup_path_1 = temp_backup_dir / backup_filename_1
                     backup_path_1.write_text(backup_content)
 
@@ -468,7 +468,7 @@ INSERT INTO pedidos VALUES (1, 1, 1, 1);
                     # Second backup with different filename
                     backup_filename_2 = "concurrent_test_2_20250702_220154.sql"
                     mock_resolve.return_value = (backup_filename_2, False)
-                    
+
                     backup_path_2 = temp_backup_dir / backup_filename_2
                     backup_path_2.write_text(backup_content)
 

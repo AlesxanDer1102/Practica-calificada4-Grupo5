@@ -178,7 +178,9 @@ class TestBackupOrchestrator:
         """
         # Configurar mocks
         mock_check_container.return_value = True
-        mock_subprocess.return_value = Mock(returncode=0, stderr="", stdout="-- Mock backup content")
+        mock_subprocess.return_value = Mock(
+            returncode=0, stderr="", stdout="-- Mock backup content"
+        )
 
         with patch(
             "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
@@ -203,7 +205,7 @@ class TestBackupOrchestrator:
             assert "exec" in call_args[0][0]
             assert "test_db" in call_args[0][0]
             assert "pg_dump" in call_args[0][0]
-            
+
             # Verify the backup file exists and has content
             assert backup_file.exists()
             assert backup_file.stat().st_size > 0
@@ -309,7 +311,12 @@ class TestBackupOrchestrator:
         ],
     )
     def test_create_backup_different_scenarios(
-        self, orchestrator_instance, mock_backup_strategy_state, custom_name, force_overwrite, expected_name
+        self,
+        orchestrator_instance,
+        mock_backup_strategy_state,
+        custom_name,
+        force_overwrite,
+        expected_name,
     ):
         """
         Test parametrizado para diferentes escenarios de create_backup().
@@ -320,7 +327,9 @@ class TestBackupOrchestrator:
             mock_check.return_value = True
 
             with patch("subprocess.run") as mock_subprocess:
-                mock_subprocess.return_value = Mock(returncode=0, stderr="", stdout="-- Test backup content")
+                mock_subprocess.return_value = Mock(
+                    returncode=0, stderr="", stdout="-- Test backup content"
+                )
 
                 with patch(
                     "backup_cli.utils.validator.BackupNameValidator.resolve_backup_filename"
@@ -343,7 +352,7 @@ class TestBackupOrchestrator:
                         custom_name,
                         force_overwrite,
                     )
-                    
+
                     # Verify the backup file was created
                     assert backup_path.exists()
                     assert backup_path.stat().st_size > 0

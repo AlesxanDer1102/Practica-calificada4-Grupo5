@@ -2,12 +2,12 @@
 Tests E2E de disaster recovery específicos para Kubernetes
 """
 
-import subprocess
-import time
 import os
+import subprocess
 import tempfile
+import time
 from typing import Any, Dict
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -22,11 +22,11 @@ pytestmark = [
 
 try:
     from tests.e2e.disaster_recovery import (
-        VolumeDestroyer,
         DataCorruptor,
         FullRecoveryTest,
-        RTOMonitor,
         RTOAnalyzer,
+        RTOMonitor,
+        VolumeDestroyer,
     )
 except ImportError:
     # Mock classes para evitar errores de importación
