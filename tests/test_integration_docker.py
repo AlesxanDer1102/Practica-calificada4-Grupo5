@@ -53,6 +53,8 @@ def create_docker_test_config(backup_dir, container_name="postgres_container"):
                 "schedule_prefix": "auto",
                 "retention_days": 7,
                 "notification_email": None,
+                "slack_token": None,
+                "slack_channel": None,
                 "list_schedules": False,
                 "remove_schedule": None,
                 "test_notifications": False,
